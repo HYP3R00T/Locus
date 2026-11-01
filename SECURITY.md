@@ -1,4 +1,4 @@
-# Security Policy
+# Locus Security Policy
 
 ## Supported versions
 

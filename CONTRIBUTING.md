@@ -1,6 +1,6 @@
-# Contributing
+# Contributing to Locus
 
-Thank you for taking the time to improve this project. Contributions are welcome when they are focused, understandable, and aligned with the project's direction.
+Thank you for taking the time to improve Locus. Contributions are welcome when they are focused, understandable, and aligned with the project's direction.
 
 ## The responsibility rule
 
@@ -16,6 +16,8 @@ Using AI tools to explore ideas, write code, create tests, or prepare documentat
 A maintainer may ask about any part of a contribution during review. A pull request that the contributor cannot reasonably explain will not be merged and may be closed. Passing automated checks does not replace understanding or ownership.
 
 ## Before starting
+
+Read [Project direction](docs/project-direction.md) for the planned scope and current implementation status.
 
 Search the existing issues before beginning work.
 
@@ -45,29 +47,24 @@ or replace maintainer approval; you remain responsible for the contribution unde
 
 ## Set up the project
 
-Install [Git](https://git-scm.com/downloads), [Docker Desktop](https://docs.docker.com/desktop/), [Visual Studio Code](https://code.visualstudio.com/download), and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). Start Docker Desktop before opening the project. Windows users should use Docker Desktop with its WSL 2 backend.
+Follow [Getting started](docs/getting-started.md) to install Mise, configure the project tools, and set up Git hooks.
+Fork the repository unless you have write access, then verify the environment:
 
-1. Fork the repository, or clone it directly if you have write access.
-2. Clone the repository and open it in Visual Studio Code.
-3. Run **Dev Containers: Reopen in Container** from the Command Palette.
-4. Wait for the container setup to install the tools and configure the Git hooks.
-5. Verify the development environment:
+```bash
+mise doctor
+mise ls --current
+prek run --all-files
+```
 
-   ```bash
-   mise doctor
-   mise ls --current
-   prek run --all-files
-   ```
+Create a branch from the latest remote default branch. For an accepted issue, use the traceable
+`issue-<number>-<short-description>` convention:
 
-6. Create a branch from the latest remote default branch. For an accepted issue, use the traceable
-   `issue-<number>-<short-description>` convention:
+```bash
+git fetch origin
+git switch -c issue-<number>-<short-description> origin/main
+```
 
-   ```bash
-   git fetch origin
-   git switch -c issue-<number>-<short-description> origin/main
-   ```
-
-   For a permitted small correction without an issue, use a concise conventional prefix such as `docs/` or `fix/`.
+For a permitted small correction without an issue, use a concise conventional prefix such as `docs/` or `fix/`.
 
 ## Make a focused change
 

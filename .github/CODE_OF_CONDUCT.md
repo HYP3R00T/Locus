@@ -1,5 +1,3 @@
-<!-- Template users must review the reporting address and enforcement responsibility for their project. -->
-
 # Contributor Covenant Code of Conduct 3.0
 
 ## Our Pledge

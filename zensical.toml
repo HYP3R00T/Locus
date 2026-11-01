@@ -1,15 +1,16 @@
 [project]
-site_name = "Rust Project Template"
-site_description = "A reusable foundation for consistent Rust development environments and maintainable project workflows."
-repo_name = "HYP3R00T/rust-project-template"
-repo_url = "https://github.com/HYP3R00T/rust-project-template"
+site_name = "Locus"
+site_url = "https://locus.hyperoot.dev/"
+site_description = "A workspace for study and research, bringing reading, handwritten notes, and connected ideas together."
+repo_name = "HYP3R00T/Locus"
+repo_url = "https://github.com/HYP3R00T/Locus"
 site_author = "HYP3R00T"
 copyright = "Copyright &copy; 2026 HYP3R00T"
 
 nav = [
   { Home = "index.md" },
   { "Getting started" = "getting-started.md" },
-  { "Rust project setup" = "rust-project.md" },
+  { "Project direction" = "project-direction.md" },
 ]
 
 [project.theme]
@@ -56,7 +57,7 @@ toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
 
 [project.theme.icon]
-logo = "lucide/layout-template"
+logo = "lucide/book-open"
 repo = "fontawesome/brands/github"
 next = "lucide/arrow-right"
 previous = "lucide/arrow-left"

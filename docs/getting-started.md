@@ -6,21 +6,24 @@ icon: lucide/rocket
 
 ## Requirements
 
-Install Git, Docker Desktop, Visual Studio Code, and the Dev Containers extension. Start Docker Desktop before
-opening the project. On Windows, use Docker Desktop with its WSL 2 backend.
+Install Git and [Mise](https://mise.jdx.dev/getting-started.html) on your development machine.
 
-## Create your repository
+## Set up Locus
 
-1. Select [Use this template](https://github.com/HYP3R00T/rust-project-template/generate) and create a repository.
-2. Clone the new repository and open it in Visual Studio Code.
-3. Run **Dev Containers: Reopen in Container** from the Command Palette.
-4. Wait for setup to install the declared tools and configure Git hooks.
-5. [Initialize a root package or Cargo workspace](rust-project.md).
+1. Clone [Locus](https://github.com/HYP3R00T/Locus), or your fork of it.
+2. Open a terminal in the repository root.
+3. Review `mise.toml`, then run `mise trust mise.toml` and `mise install`.
+4. Activate Mise in your shell, following its installation guide.
+5. Run `bash scripts/enter_project.sh` to configure Git hooks and Commitizen.
+6. Run the environment checks below.
+
+Application scaffolding is not present yet. See [Project direction](project-direction.md) for the planned
+Tauri, Next.js, and Rust boundaries; there is no application to launch at this stage.
 
 ## Tools and workflows
 
-The Dev Container provides a Linux development environment across Windows, macOS, and Linux hosts.
 Mise declares the project tools and provides tasks for running them.
+Native dependencies for Tauri will be documented when the application is scaffolded.
 
 - Rust uses the default profile, including rustfmt, Clippy, and local Rust docs.
 - uv runs Python tools, including Commitizen and Zensical.
@@ -41,8 +44,8 @@ mise ls --current
 prek run --all-files
 ```
 
-The template's CI checks repository files. Add Rust checks after initializing your Cargo project, following the
-[Rust project setup guide](rust-project.md#add-rust-checks).
+CI currently checks repository files. Application builds, Rust checks, and frontend checks will be added
+with their respective application scaffolding.
 
 ## Format TOML
 
@@ -60,5 +63,5 @@ The pre-commit hook pins its own Tombi version so local hooks and CI use the sam
 mise run docs
 ```
 
-See the [contribution guide](https://github.com/HYP3R00T/rust-project-template/blob/main/CONTRIBUTING.md)
+See the [contribution guide](https://github.com/HYP3R00T/Locus/blob/main/CONTRIBUTING.md)
 for the complete contribution workflow.

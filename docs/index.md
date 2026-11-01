@@ -1,18 +1,15 @@
 ---
-icon: lucide/container
+icon: lucide/book-open
 ---
 
-# Rust Project Template
+# Locus
 
-A reusable starting point for building understandable, auditable, and maintainable projects.
+A workspace for study and research, bringing source material, handwritten drawings, and typed notes together.
 
-!!! note "Pain point"
-
-    Starting a project repeatedly consumes time on environment setup, tool installation, repository hygiene, and
-    contribution rules before useful product work can begin. When every project solves these concerns differently,
-    people and automation must relearn the development environment each time.
+**Status: planning.** The repository has development tooling and documentation; the application is not implemented yet.
 
 ## Start here
 
-- [Getting started](getting-started.md): requirements, container setup, tools, and environment verification.
-- [Rust project setup](rust-project.md): choose a root package or workspace, add packages, and configure Rust checks.
+- [Project direction](project-direction.md): planned workflow, architecture boundaries, and prototype acceptance criteria.
+- [Getting started](getting-started.md): environment setup, tools, and available verification.
+- [Contributing](https://github.com/HYP3R00T/Locus/blob/main/CONTRIBUTING.md): contribution and review workflow.
