@@ -1,0 +1,8 @@
+toml-version = "v1.0.0"
+
+[files]
+include = ["**/*.toml"]
+exclude = ["**/Cargo.lock", "**/mise*.lock"]
+
+[schema]
+enabled = false
