@@ -21,7 +21,8 @@
     "desktop:dev": "node scripts/tauri.mjs dev",
     "desktop:build": "node scripts/tauri.mjs build -- --locked",
     "desktop:check": "cargo fmt --manifest-path packages/src-tauri/Cargo.toml --all -- --check && cargo clippy --manifest-path packages/src-tauri/Cargo.toml --all-targets --locked -- -D warnings && cargo test --manifest-path packages/src-tauri/Cargo.toml --locked",
-    "test": "node --test scripts/dev-config.test.mjs"
+    "test": "node --test scripts/dev-config.test.mjs",
+    "ui": "npm run ui --workspace @locus/nextjs --"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.4"

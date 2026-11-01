@@ -9,7 +9,10 @@ icon: lucide/compass
 Locus is a personal workspace for studying books and papers, taking handwritten or typed notes,
 and connecting ideas across materials. It should support independent study first, with optional agent assistance later.
 
-**Status: foundation scaffolded.** The Next.js frontend and Tauri shell are present.
+**Status: interface foundation.** The Next.js frontend and Tauri shell are present, with a full-width workspace,
+resizable and collapsible navigation, settings, and a sample subject → study space → material hierarchy.
+The sample Physics subject contains Classical mechanics, grouped into books, research papers, and problem solving.
+These entries demonstrate navigation only; subjects and materials cannot yet be created or saved.
 The study and research capabilities described below are planned, not implemented.
 
 ## First prototype
