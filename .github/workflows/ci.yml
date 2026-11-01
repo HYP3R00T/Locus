@@ -27,3 +27,30 @@ jobs:
         uses: j178/prek-action@v2
         with:
           extra-args: --all-files --skip no-commit-to-branch
+
+  application-checks:
+    name: Application checks (Linux)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+            libxdo-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+      - name: Install Node.js and Rust
+        uses: jdx/mise-action@v4
+        with:
+          install_args: node rust
+      - name: Install locked workspace dependencies
+        run: npm ci
+      - name: Check frontend
+        run: npm run check
+      - name: Check Rust
+        run: npm run desktop:check
+      - name: Build desktop executable without installers
+        run: npm run tauri -- build --debug --no-bundle -- --locked

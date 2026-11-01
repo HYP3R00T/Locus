@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light dark;
+  --background: #f7f6f2;
+  --foreground: #292d28;
+  --muted: #62685e;
+  --accent: #637c4b;
+  --line: #dcded6;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: system-ui, sans-serif; }
+.workspace { min-height: 100svh; display: flex; flex-direction: column; padding: clamp(24px, 5vw, 64px); }
+.wordmark { display: flex; align-items: baseline; gap: 5px; font-size: 24px; font-weight: 650; letter-spacing: -1px; }
+.brand-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+main { width: 100%; max-width: 900px; margin: auto; padding: 72px 0; }
+.eyebrow { color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+h1 { margin: 24px 0; font-family: Georgia, serif; font-size: clamp(44px, 7vw, 84px); font-weight: 400; letter-spacing: -0.045em; line-height: 1.08; }
+.intro { max-width: 440px; font-size: 18px; line-height: 1.7; color: var(--muted); }
+.status { margin-top: 40px; font-size: 13px; color: var(--muted); }
+footer { border-top: 1px solid var(--line); padding-top: 20px; font-size: 12px; color: var(--muted); }
+
+@media (prefers-color-scheme: dark) {
+  :root { --background: #191d18; --foreground: #e9ece3; --muted: #a3ad9a; --accent: #b0c496; --line: #343d2e; }
+}

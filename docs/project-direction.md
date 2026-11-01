@@ -9,7 +9,8 @@ icon: lucide/compass
 Locus is a personal workspace for studying books and papers, taking handwritten or typed notes,
 and connecting ideas across materials. It should support independent study first, with optional agent assistance later.
 
-**Status: planned.** This page records the intended design, not existing functionality.
+**Status: foundation scaffolded.** The Next.js frontend and Tauri shell are present.
+The study and research capabilities described below are planned, not implemented.
 
 ## First prototype
 
@@ -49,8 +50,8 @@ A static frontend can still load documents, update the interface, and call Rust 
 Next.js runtime server features are outside this architecture: backend operations belong in Rust rather than
 Server Actions or request-time Next.js handlers. Build-time rendering remains possible.
 
-A PDF rendering library, database, and application directory layout have not been selected.
-The repository does not yet contain Next.js or Tauri application scaffolding.
+A PDF rendering library and database have not been selected. The frontend lives in `packages/src-nextjs/`,
+with the Rust application directly in `packages/src-tauri/`. See [Getting started](getting-started.md) for development and build commands.
 
 ## Later capabilities
 
