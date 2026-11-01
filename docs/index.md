@@ -6,7 +6,8 @@ icon: lucide/book-open
 
 A workspace for study and research, bringing source material, handwritten drawings, and typed notes together.
 
-**Status: planning.** The repository has development tooling and documentation; the application is not implemented yet.
+**Status: foundation scaffolded.** A Next.js frontend and Tauri desktop shell are available for local development.
+PDF reading, drawing, and linked notes are not implemented yet.
 
 ## Start here
 

@@ -1,0 +1,29 @@
+{
+  "name": "locus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A workspace for study and research.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
+  "workspaces": [
+    "packages/src-nextjs"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @locus/nextjs --",
+    "build": "npm run build --workspace @locus/nextjs",
+    "lint": "npm run lint --workspace @locus/nextjs",
+    "typecheck": "npm run typecheck --workspace @locus/nextjs",
+    "check": "npm run check --workspace @locus/nextjs && npm test",
+    "tauri": "node scripts/tauri.mjs",
+    "desktop:dev": "node scripts/tauri.mjs dev",
+    "desktop:build": "node scripts/tauri.mjs build -- --locked",
+    "desktop:check": "cargo fmt --manifest-path packages/src-tauri/Cargo.toml --all -- --check && cargo clippy --manifest-path packages/src-tauri/Cargo.toml --all-targets --locked -- -D warnings && cargo test --manifest-path packages/src-tauri/Cargo.toml --locked",
+    "test": "node --test scripts/dev-config.test.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}
