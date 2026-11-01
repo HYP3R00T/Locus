@@ -125,6 +125,41 @@ live reload. Tauri injects hashes for bundled inline scripts. External fonts and
 Application version comes from `package.json` in the Tauri configuration; keep the Cargo package version aligned
 when preparing a release. `dev.hyperoot.locus` is the desktop application identifier.
 
+## Frontend components and theme
+
+Locus uses [shadcn/ui](https://ui.shadcn.com/docs) with the
+[selected preset `bddBUJXM`](https://ui.shadcn.com/create?preset=bddBUJXM): Lyra style, Zinc theme and base color,
+Geist font, Lucide icons, and default radius. The component primitives use Base UI.
+
+Configuration lives in `packages/src-nextjs/components.json`, generated components in `components/ui/`,
+and theme tokens in `app/globals.css`, all within the Next.js package. Tailwind CSS v4 uses its PostCSS plugin.
+Geist is bundled through Fontsource rather than fetched from Google during builds. The interface follows the
+system color scheme until a light/dark preference is selected; the preference is saved locally.
+
+Add components from the repository root using the pinned frontend CLI:
+
+```bash
+npm run ui -- add button
+```
+
+The interface fills the viewport, with an independently collapsible application rail and contextual navigation,
+a compact top bar, and an unrestricted content pane. Expand a navigation column, then drag its right edge
+or use the focused separator's arrow keys to adjust its width. The primary column is bounded to 208–320 px,
+and the study tree to 208–448 px. The content pane keeps at least 320 px; available viewport space can further
+limit expansion. Collapsed columns stay at 56 px and cannot be dragged. Each column restores its last user-selected
+expanded width during the current session. Resizing the first column preserves the study tree's width when space allows.
+On narrow screens the navigation moves into a sheet.
+Settings stays at the bottom of the application rail; Appearance offers System, Light, and Dark modes.
+
+The application rail shows a sample Physics subject. Its Classical mechanics study space groups materials into
+Books, Research papers, and Problem solving. Selecting a material or note changes the workspace placeholder
+and breadcrumb. The hierarchy is static sample data; it does not create files or study records.
+PDF rendering, drawing, typed-note editing, project creation, and persistence of study data remain planned.
+Top-bar resizing, drag-and-drop, and multiple content panes are also deferred.
+
+`components/layout` owns the shell and navigation controls, `components/workspace` owns the sample hierarchy and
+content placeholder, and `components/settings` owns preferences. No shared UI package is needed until another app consumes these components.
+
 ## Repository tools and documentation
 
 - Mise declares the tool versions and development tasks.
