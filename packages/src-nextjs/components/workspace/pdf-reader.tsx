@@ -5,7 +5,17 @@ import type { PDFDocumentLoadingTask } from "pdfjs-dist";
 import type { PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { desktop, type StudyDocument } from "@/lib/library";
+
+type FitMode = "page-width" | "page-height";
+const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
 
 export function PdfReader({
   document,
@@ -19,6 +29,7 @@ export function PdfReader({
   const [pageIndex, setPageIndex] = useState(document.pageIndex);
   const [count, setCount] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [zoomPreset, setZoomPreset] = useState<FitMode | null>("page-width");
   const [draft, setDraft] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +40,7 @@ export function PdfReader({
   const pages = useRef<HTMLDivElement>(null);
   const viewer = useRef<PDFViewer | null>(null);
   const initial = useRef(document);
-  const fit = useRef(true);
+  const fit = useRef<FitMode | null>("page-width");
   const interacted = useRef(false);
   const passwordCallback = useRef<((password: string) => void) | null>(null);
   const save = useRef(onPosition);
@@ -67,6 +78,8 @@ export function PdfReader({
         cMapUrl: `${base}cmaps/`,
         cMapPacked: true,
         standardFontDataUrl: `${base}standard_fonts/`,
+        // Use bundled substitutes for missing PDF fonts instead of OS-installed fonts.
+        useSystemFonts: false,
         wasmUrl: `${base}wasm/`,
         isEvalSupported: false,
       };
@@ -180,14 +193,18 @@ export function PdfReader({
       });
       instance.setDocument(loaded);
       let previousWidth = container.clientWidth;
+      let previousHeight = container.clientHeight;
       resize = new ResizeObserver(([entry]) => {
-        const width = entry.contentRect.width;
-        if (Math.abs(width - previousWidth) < 1) return;
+        const { width, height } = entry.contentRect;
+        const widthChanged = Math.abs(width - previousWidth) >= 1;
+        const heightChanged = Math.abs(height - previousHeight) >= 1;
         previousWidth = width;
+        previousHeight = height;
+        if (!widthChanged && !(fit.current === "page-height" && heightChanged)) return;
         clearTimeout(fitTimer);
         fitTimer = setTimeout(() => {
           if (!cancelled && fit.current && activeViewer.pagesCount) {
-            activeViewer.currentScaleValue = "page-width";
+            activeViewer.currentScaleValue = fit.current;
           }
         }, 150);
       });
@@ -228,9 +245,29 @@ export function PdfReader({
     const instance = viewer.current;
     if (!instance) return;
     interacted.current = true;
-    fit.current = false;
+    fit.current = null;
+    setZoomPreset(null);
     instance.currentScale = Math.max(0.25, Math.min(5, instance.currentScale + direction * 0.25));
   }
+  function selectZoom(value: string) {
+    const instance = viewer.current;
+    if (!instance) return;
+    interacted.current = true;
+    if (value === "page-width" || value === "page-height") {
+      fit.current = value;
+      setZoomPreset(value);
+      instance.currentScaleValue = value;
+    } else {
+      const scale = Number(value);
+      if (!ZOOM_PRESETS.includes(scale)) return;
+      fit.current = null;
+      setZoomPreset(null);
+      instance.currentScale = scale;
+    }
+  }
+  const matchingPreset = ZOOM_PRESETS.find((scale) => Math.abs(scale - zoom) < 0.0001);
+  const selectedZoom =
+    zoomPreset ?? (matchingPreset === undefined ? "custom" : String(matchingPreset));
   return (
     <section aria-label={`PDF reader: ${document.title}`} className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b px-3 text-xs">
@@ -272,18 +309,37 @@ export function PdfReader({
           >
             <ZoomOutIcon />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Fit page width"
+          <Select
+            value={selectedZoom}
             disabled={!count}
-            onClick={() => {
-              fit.current = true;
-              if (viewer.current) viewer.current.currentScaleValue = "page-width";
+            onValueChange={(value) => {
+              if (value !== null) selectZoom(value);
             }}
           >
-            {Math.round(zoom * 100)}%
-          </Button>
+            <SelectTrigger size="sm" aria-label="PDF zoom" className="max-w-48">
+              <SelectValue>
+                {zoomPreset === "page-width"
+                  ? `Fit to width (${Math.round(zoom * 100)}%)`
+                  : zoomPreset === "page-height"
+                    ? `Fit to height (${Math.round(zoom * 100)}%)`
+                    : `${Math.round(zoom * 100)}%`}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end" alignItemWithTrigger={false}>
+              <SelectItem value="page-width">Fit to width</SelectItem>
+              <SelectItem value="page-height">Fit to height</SelectItem>
+              {ZOOM_PRESETS.map((scale) => (
+                <SelectItem key={scale} value={String(scale)}>
+                  {Math.round(scale * 100)}%
+                </SelectItem>
+              ))}
+              {zoomPreset === null && matchingPreset === undefined && (
+                <SelectItem value="custom" disabled>
+                  {Math.round(zoom * 100)}%
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
           <Button
             variant="ghost"
             size="icon-sm"
