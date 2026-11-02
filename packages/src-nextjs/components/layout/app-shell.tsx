@@ -13,7 +13,6 @@ import { useState } from "react";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { NavigationLayout } from "@/components/layout/navigation-layout";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -280,9 +279,6 @@ export function AppShell() {
                 </>
               )}
             </nav>
-            <div className="ml-auto shrink-0">
-              <ThemeToggle />
-            </div>
           </header>
           {data.ready && !data.native && (
             <p className="border-b px-4 py-2 text-xs text-muted-foreground">

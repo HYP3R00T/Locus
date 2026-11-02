@@ -152,7 +152,7 @@ and the study tree to 208–448 px. The content pane keeps at least 320 px; avai
 limit expansion. Collapsed columns stay at 56 px and cannot be dragged. Each column restores its last user-selected
 expanded width during the current session. Resizing the first column preserves the study tree's width when space allows.
 On narrow screens the navigation moves into a sheet.
-Desktop windows use a custom draggable title bar with minimize, maximize/restore, and close controls.
+Desktop windows use a custom draggable title bar with the theme toggle, minimize, maximize/restore, and close controls.
 The browser preview keeps ordinary browser controls. Sidebar toggles update layout immediately; PDF width fitting
 is deferred until width changes settle, avoiding repeated renders during resizing.
 Settings stays at the bottom of the application rail; Appearance offers System, Light, and Dark modes.
@@ -162,7 +162,8 @@ Right-click a folder to add PDFs there. PDF, folder, and workspace context menus
 and removal without inline action buttons. Drag PDFs into folders or onto empty tree space to move them to the
 workspace root; the **Move to** context submenu is a keyboard-accessible alternative.
 The reader scrolls continuously through all pages. Type a physical page number and press Enter to jump;
-the field also tracks scrolling. Zoom, selectable text, and encrypted-PDF passwords are supported.
+the field also tracks scrolling. The zoom dropdown offers fixed percentages, fit to width, and fit to height.
+Fit modes follow viewport changes; zoom buttons switch to a fixed scale. Selectable text and encrypted-PDF passwords are supported.
 Removal dialogs explain which references will disappear; original PDF files are never deleted.
 
 `components/layout` owns the shell, `components/workspace` owns library interactions and PDF rendering,

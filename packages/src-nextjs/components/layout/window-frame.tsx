@@ -5,6 +5,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MinusIcon, SquareIcon, XIcon } from "lucide-react";
 import { type ReactNode, useState, useSyncExternalStore } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
+
 const subscribe = () => () => {};
 const browserSnapshot = () => false;
 
@@ -31,6 +33,7 @@ export function WindowFrame({ children }: { children: ReactNode }) {
             </span>
           </div>
           <div className="flex shrink-0">
+            <ThemeToggle />
             <button
               type="button"
               aria-label="Minimize window"
