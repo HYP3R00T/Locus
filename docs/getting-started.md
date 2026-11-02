@@ -256,3 +256,9 @@ Untracked new files are not covered by `prek run --all-files`; pass them explici
 verifying an uncommitted change. Checks do not authorize dependency upgrades. Run only relevant verification and
 distinguish formatting, type checks, tests, builds, and manual desktop behavior in the report. Unavailable platforms
 and installed-app tests remain unverified until exercised; do not infer them from CI configuration or a successful build.
+
+The Quality Gate caches npm downloads in both jobs and Rust dependencies/build artifacts for the native crate.
+`npm ci` still installs the locked dependencies, and all checks run on cache hits. Rust cache keys account for
+the compiler, manifests, lockfile, and build environment; a runner-baseline key keeps Ubuntu build artifacts
+separate. Update that key when changing the Linux runner baseline. The first run populates caches; compare
+later runs with matching keys to assess savings. System packages are installed fresh.
