@@ -1,0 +1,43 @@
+---
+import Section from "@/components/common/Section.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+const links = [
+  { href: "/guide/", title: "Using Locus" },
+  { href: "/install/", title: "Local installation" },
+  { href: "/roadmap/", title: "Progress & plans" },
+  { href: "/changelog/", title: "What’s changed" },
+];
+---
+
+<BaseLayout title={`${title} — Locus`} description={description}>
+  <Section frameClass="grid md:grid-cols-[15rem_minmax(0,1fr)]">
+    <nav
+      class="border-b border-border px-5 py-8 md:border-r md:border-b-0 md:px-8 md:py-14"
+      aria-label="Guides"
+    >
+      <p class="mb-6 font-mono text-xs tracking-widest text-foreground-3 uppercase">
+        In this space
+      </p>
+      <div class="flex flex-wrap gap-4 md:flex-col">
+        {links.map((link) => (
+          <a
+            class="text-sm text-foreground-2 hover:text-accent-1 aria-[current=page]:text-accent-1"
+            href={link.href}
+            aria-current={Astro.url.pathname === link.href ? "page" : undefined}
+          >
+            {link.title}
+          </a>
+        ))}
+      </div>
+    </nav>
+    <article class="min-w-0 px-5 py-12 md:px-10 md:py-16 lg:px-15">
+      <div class="prose"><slot /></div>
+    </article>
+  </Section>
+</BaseLayout>

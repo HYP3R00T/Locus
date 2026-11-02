@@ -1,0 +1,75 @@
+---
+import Section from "@/components/common/Section.astro";
+
+const features = [
+  {
+    number: "01",
+    title: "Read at your own pace",
+    description:
+      "Scroll through books and papers, follow references, and return to your saved reading position.",
+    detail: "PDFs · Links · Zoom",
+  },
+  {
+    number: "02",
+    title: "Work it out by hand",
+    description:
+      "Put an Excalidraw canvas beside the source. Sketch an idea, draw a diagram, or work through a problem.",
+    detail: "Drawing · Local saving",
+  },
+  {
+    number: "03",
+    title: "Arrange your study space",
+    description:
+      "Open up to four resizable panes. Keep a second reference nearby or open the same book at different pages.",
+    detail: "Split panes · Independent reading",
+  },
+  {
+    number: "04",
+    title: "Keep your materials yours",
+    description:
+      "Organize references in workspaces and folders without copying your PDFs. Reopen drawings as standard Excalidraw files.",
+    detail: "Local files · Portable drawings",
+  },
+];
+---
+
+<Section id="features">
+  <div class="site-section-heading px-5 py-12 md:px-10 lg:px-15">
+    <p class="font-mono text-xs tracking-[0.14em] text-accent-1 uppercase">Your study space</p>
+    <div class="mt-4 grid gap-5 md:grid-cols-[minmax(0,0.7fr)_minmax(20rem,0.3fr)] md:items-end">
+      <h2
+        class="font-display text-4xl font-medium tracking-[-0.035em] text-foreground-0 md:text-5xl"
+      >
+        Read. Think. Leave yourself a way back.
+      </h2>
+      <p class="max-w-md text-sm leading-6 text-foreground-2 md:justify-self-end">
+        Keep your source material and your working side by side. Choose the arrangement that helps
+        you concentrate.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2">
+    {features.map((feature, index) => (
+      <article
+        class:list={[
+          "group min-h-72 border-border px-5 py-10 transition-colors hover:bg-background-1 md:px-10 lg:px-15",
+          index % 2 === 0 && "md:border-r",
+          index < 2 && "border-b",
+        ]}
+      >
+        <div class="flex items-start justify-between gap-6">
+          <span class="font-mono text-xs text-foreground-3">{feature.number}</span>
+          <span class="h-px w-10 bg-border transition-[width,background-color] group-hover:w-16 group-hover:bg-accent-1" />
+        </div>
+        <h3 class="mt-14 font-display text-2xl font-medium tracking-tight text-foreground-0">
+          {feature.title}
+        </h3>
+        <p class="mt-4 max-w-xl leading-7 text-foreground-2">{feature.description}</p>
+        <p class="mt-8 font-mono text-xs tracking-[0.08em] text-foreground-3 uppercase">
+          {feature.detail}
+        </p>
+      </article>
+    ))}
+  </div>
+</Section>

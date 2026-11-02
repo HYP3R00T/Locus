@@ -1,0 +1,63 @@
+---
+import type { NavItem } from "@/lib/types";
+
+interface Props {
+  navItems: NavItem[];
+  contactItem?: NavItem;
+}
+
+const { navItems, contactItem } = Astro.props as Props;
+
+import { Icon } from "astro-icon/components";
+import { ModeToggle } from "@/components/core/ModeToggle";
+
+const pathname = Astro.url.pathname;
+const isCurrent = (href: string) =>
+  href.startsWith("/") && (href === "/" ? pathname === href : pathname.startsWith(href));
+---
+
+<div
+  id="mobile-menu"
+  data-mobile-menu
+  data-open="false"
+  class="pointer-events-none fixed inset-x-0 z-60 max-h-0 overflow-hidden opacity-0 transition-opacity duration-150 ease-out data-[open=true]:pointer-events-auto data-[open=true]:max-h-[calc(100svh-4rem)] data-[open=true]:overflow-y-auto data-[open=true]:opacity-100 motion-reduce:transition-none md:hidden"
+  role="dialog"
+  aria-hidden="true"
+>
+  <div class="site-grid-frame border-b bg-background-0">
+    <nav class="grid divide-y divide-border" aria-label="Mobile navigation">
+      {navItems.map((item) => {
+        const isExternal = item.blank || item.href.startsWith("http");
+
+        return (
+          <a
+            href={item.href}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noopener noreferrer" : undefined}
+            aria-current={isCurrent(item.href) ? "page" : undefined}
+            class="flex min-h-14 items-center justify-between px-5 py-3 font-display text-lg text-foreground-1 transition-colors hover:bg-background-1 hover:text-accent-1 aria-[current=page]:text-accent-1"
+          >
+            <span>{item.label}</span>
+            {isExternal ? (
+              <Icon name="arrow-up-right" class="size-4 text-foreground-3" aria-hidden="true" />
+            ) : null}
+          </a>
+        );
+      })}
+    </nav>
+
+    <div class="grid grid-cols-[4rem_minmax(0,1fr)] divide-x divide-border border-t border-border">
+      <ModeToggle client:load className="size-16" />
+      {contactItem && (
+        <a
+          href={contactItem.href}
+          target={contactItem.blank ? "_blank" : undefined}
+          rel={contactItem.blank ? "noopener noreferrer" : undefined}
+          class="flex min-h-16 items-center justify-center bg-primary px-5 font-display text-base font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+        >
+          {contactItem.label}
+        </a>
+      )}
+    </div>
+  </div>
+</div>

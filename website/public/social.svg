@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Locus — A space for independent study</title>
+  <rect width="1200" height="630" fill="#151c27" />
+  <path d="M64 0v630M1136 0v630M0 96h1200M0 534h1200" stroke="#344253" />
+  <text x="110" y="185" font-family="sans-serif" font-size="28" fill="#7bb9f5">Locus</text>
+  <text x="110" y="300" font-family="sans-serif" font-size="64" fill="#f1f4f8">Read. Think.</text>
+  <text x="110" y="390" font-family="sans-serif" font-size="64" fill="#f1f4f8">
+    Make room for your working.
+  </text>
+  <text x="110" y="488" font-family="sans-serif" font-size="24" fill="#a8b5c8">
+    A local workspace for independent study.
+  </text>
+</svg>

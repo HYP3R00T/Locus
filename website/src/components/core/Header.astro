@@ -1,0 +1,86 @@
+---
+// Header Component - Navigation and branding
+import { navItems } from "@data/config";
+import { Icon } from "astro-icon/components";
+import MobileMenuPanel from "@/components/core/MobileMenuPanel.astro";
+import MobileMenuToggle from "@/components/core/MobileMenuToggle.astro";
+import { ModeToggle } from "@/components/core/ModeToggle";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const visibleNavItems = navItems.filter((item) => !item.special);
+const contactItem = visibleNavItems.find((item) => item.href === "/contact");
+const primaryNavItems = visibleNavItems.filter((item) => item.href !== "/contact");
+const pathname = Astro.url.pathname;
+const isCurrent = (href: string) =>
+  href.startsWith("/") && (href === "/" ? pathname === href : pathname.startsWith(href));
+---
+
+<header
+  data-header-shell
+  data-menu-open="false"
+  class="sticky top-0 z-80 border-b border-border bg-background-0/90 backdrop-blur-xl"
+>
+  <div
+    data-header-nav
+    data-menu-open="false"
+    class="site-grid-frame grid min-h-16 grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(12rem,1fr)_auto_minmax(12rem,1fr)]"
+  >
+    <div class="flex min-w-0 items-center px-5 lg:px-8">
+      <a
+        href="/"
+        class="flex min-w-0 flex-row font-mono text-base md:text-lg"
+        aria-label="Locus home"
+      >
+        <span class="text-accent-1">Locus</span>
+      </a>
+    </div>
+
+    <nav
+      class="hidden items-center gap-7 font-mono lg:gap-9 md:flex"
+      aria-label="Primary navigation"
+    >
+      {primaryNavItems.map((item) => {
+        const isExternal = item.blank || item.href.startsWith("http");
+
+        return (
+          <a
+            href={item.href}
+            target={isExternal ? "_blank" : undefined}
+            rel={isExternal ? "noopener noreferrer" : undefined}
+            aria-current={isCurrent(item.href) ? "page" : undefined}
+            class="inline-flex items-center gap-1.5 py-2 text-sm text-foreground-2 transition-colors duration-150 hover:text-foreground-0 focus-visible:text-foreground-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring aria-[current=page]:text-accent-1"
+          >
+            {item.label}
+            {isExternal && <Icon name="arrow-up-right" class="size-3.5" aria-hidden="true" />}
+          </a>
+        );
+      })}
+    </nav>
+
+    <div class="hidden min-w-0 items-center justify-end gap-2 px-5 md:flex lg:px-8">
+      <ModeToggle
+        client:load
+        className="size-10 border-0 hover:bg-transparent hover:text-foreground-0"
+      />
+      {contactItem && (
+        <a
+          href={contactItem.href}
+          class={cn(
+            buttonVariants({ variant: "default" }),
+            "h-9 border-0 bg-accent-1 px-4 text-background-0 hover:bg-accent-2",
+          )}
+        >
+          {contactItem.label}
+        </a>
+      )}
+    </div>
+
+    <div class="md:hidden">
+      <MobileMenuToggle />
+    </div>
+  </div>
+  <MobileMenuPanel navItems={primaryNavItems} contactItem={contactItem} />
+</header>
+
+<!-- AnimatedText component handles the animation behavior -->
