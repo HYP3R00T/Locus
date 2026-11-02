@@ -1,5 +1,6 @@
 "use client";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
 import type { PDFDocumentLoadingTask } from "pdfjs-dist";
 import type { PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { desktop, type StudyDocument } from "@/lib/library";
+import { wheelZoomScale } from "@/lib/pdf-interactions";
 
 type FitMode = "page-width" | "page-height";
 const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
@@ -36,6 +38,7 @@ export function PdfReader({
   const [zoom, setZoom] = useState(1);
   const [zoomPreset, setZoomPreset] = useState<FitMode | null>("page-width");
   const [draft, setDraft] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [positionError, setPositionError] = useState<string | null>(null);
@@ -58,6 +61,54 @@ export function PdfReader({
     save.current = onPosition;
     remember.current = onViewPosition;
   }, [onPosition, onViewPosition]);
+  useEffect(() => {
+    const container = scroll.current;
+    if (!container) return;
+    let disposed = false;
+    function wheel(event: WheelEvent) {
+      interacted.current = true;
+      if (!event.ctrlKey) return;
+      // React's delegated wheel listener is passive; use a native listener to
+      // prevent WebView page zoom and leave other panes unchanged.
+      event.preventDefault();
+      const instance = viewer.current;
+      if (!instance?.pagesCount || !container) return;
+      const scale = wheelZoomScale(
+        instance.currentScale,
+        event.deltaY,
+        event.deltaMode,
+        container.clientHeight,
+      );
+      if (scale === instance.currentScale) return;
+      fit.current = null;
+      setZoomPreset(null);
+      instance.updateScale({
+        scaleFactor: scale / instance.currentScale,
+        drawingDelay: 150,
+        origin: [event.clientX, event.clientY],
+      });
+    }
+    function openLink(event: MouseEvent) {
+      if (event.button !== 0 || !(event.target instanceof Element)) return;
+      const link = event.target.closest<HTMLAnchorElement>("a[href]");
+      if (!link || link.closest("[data-internal-link]")) return;
+      event.preventDefault();
+      void openUrl(link.href)
+        .then(() => {
+          if (!disposed) setLinkError(null);
+        })
+        .catch(() => {
+          if (!disposed) setLinkError("Could not open this link in its default application.");
+        });
+    }
+    container.addEventListener("wheel", wheel, { passive: false });
+    container.addEventListener("click", openLink);
+    return () => {
+      disposed = true;
+      container.removeEventListener("wheel", wheel);
+      container.removeEventListener("click", openLink);
+    };
+  }, []);
   useEffect(() => {
     const source = initial.current;
     let cancelled = false;
@@ -136,17 +187,27 @@ export function PdfReader({
 
       const loaded = await task.promise;
       if (cancelled || !scroll.current || !pages.current) return;
-      const { PDFViewer, EventBus } = await import("pdfjs-dist/web/pdf_viewer.mjs");
+      const { PDFViewer, EventBus, PDFLinkService, LinkTarget } = await import(
+        "pdfjs-dist/web/pdf_viewer.mjs"
+      );
       if (cancelled) return;
       const container = scroll.current;
       const eventBus = new EventBus();
+      const links = new PDFLinkService({
+        eventBus,
+        externalLinkTarget: LinkTarget.BLANK,
+        ignoreDestinationZoom: true,
+      });
       instance = new PDFViewer({
         container,
         viewer: pages.current,
         eventBus,
-        annotationMode: engine.AnnotationMode.DISABLE,
+        linkService: links,
+        annotationMode: engine.AnnotationMode.ENABLE,
         maxCanvasPixels: 16 * 1024 * 1024,
       });
+      links.setViewer(instance);
+      links.setDocument(loaded);
       viewer.current = instance;
       const activeViewer = instance;
       function restore() {
@@ -375,9 +436,9 @@ export function PdfReader({
           </Button>
         </div>
       </div>
-      {(pageError || positionError) && (
+      {(pageError || positionError || linkError) && (
         <p role="alert" className="px-4 py-2 text-xs text-destructive">
-          {pageError || positionError}
+          {pageError || positionError || linkError}
         </p>
       )}
       {error && (
@@ -425,9 +486,6 @@ export function PdfReader({
           aria-label="PDF pages"
           data-fit-width={zoomPreset === "page-width"}
           className="locus-pdf-scroll absolute inset-0 overflow-auto bg-muted/20"
-          onWheel={() => {
-            interacted.current = true;
-          }}
           onPointerDown={() => {
             interacted.current = true;
           }}
