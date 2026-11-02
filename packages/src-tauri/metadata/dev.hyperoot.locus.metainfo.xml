@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.hyperoot.locus</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Locus</name>
+  <summary>A workspace for study and research</summary>
+  <developer id="dev.rajeshdas">
+    <name>Rajesh Das</name>
+  </developer>
+  <description>
+    <p>Locus is a local workspace for reading books and papers, drawing handwritten notes,
+    and returning to your study materials. Study independently without an AI account.</p>
+    <ul>
+      <li>Organize PDFs into workspaces and folders without moving or copying the original files.</li>
+      <li>Read continuously, follow document links, and return to your saved reading position.</li>
+      <li>Write and sketch on Excalidraw whiteboards saved locally as portable drawing files.</li>
+      <li>Arrange up to four resizable panes for reading and drawing side by side.</li>
+      <li>Customize keyboard shortcuts and choose a light or dark appearance.</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">Locus.desktop</launchable>
+  <provides>
+    <binary>locus</binary>
+  </provides>
+  <url type="homepage">https://locus.hyperoot.dev/</url>
+  <url type="help">https://locus.hyperoot.dev/guide/</url>
+  <url type="bugtracker">https://github.com/HYP3R00T/Locus/issues</url>
+  <url type="vcs-browser">https://github.com/HYP3R00T/Locus</url>
+  <categories>
+    <category>Education</category>
+  </categories>
+  <keywords>
+    <keyword>study</keyword>
+    <keyword>research</keyword>
+    <keyword>PDF</keyword>
+    <keyword>notes</keyword>
+    <keyword>whiteboard</keyword>
+    <keyword>Excalidraw</keyword>
+  </keywords>
+</component>
