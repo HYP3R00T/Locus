@@ -1,7 +1,3 @@
----
-icon: lucide/rocket
----
-
 # Getting started
 
 ## Requirements
@@ -28,37 +24,55 @@ Browser-only development does not need these native libraries.
 2. Review `mise.toml`, then run `mise trust mise.toml` and `mise install`.
 3. Activate Mise in your shell, following its installation guide.
 4. Run `bash scripts/enter_project.sh` to configure Git hooks and Commitizen.
-5. Install workspace dependencies with `npm ci` (or `mise run install`).
+5. Install workspace dependencies with `npm ci`.
 
 The npm and Cargo lockfiles belong in version control. Use `npm ci` for clean, repeatable installs.
-Node.js is pinned in `mise.toml`; the stable Rust channel follows `rust-toolchain.toml` and is not frozen by `mise.lock`.
+Node.js follows `lts` in `mise.toml`, with the resolved release recorded in `mise.lock`. Refresh it deliberately
+with `mise lock node --bump` when updating the toolchain. The package engine fields declare minimum supported
+Node/npm versions rather than imposing a conflicting upper limit. The stable Rust channel follows
+`rust-toolchain.toml` and is not frozen by `mise.lock`.
 
-## Local development
+## Daily commands
 
-| Command                                    | Purpose                                                |
-| ------------------------------------------ | ------------------------------------------------------ |
-| `npm run dev` / `mise run dev`             | Frontend on an available loopback port                 |
-| `npm run desktop:dev` / `mise run desktop` | Desktop window with the same frontend and Rust runtime |
+Run from the repository root:
 
-The browser server starts at port 3000 and automatically tries the next available port if it is occupied.
-Open the **Local** URL printed in the terminal. An explicitly supplied `--port` or `PORT` disables Next.js fallback.
+| When you need to…                                         | Run                |
+| --------------------------------------------------------- | ------------------ |
+| Develop the desktop app with Rust and frontend hot reload | `mise run dev`     |
+| Build an installable Debian package                       | `mise run build`   |
+| Format source and apply safe lint/import fixes            | `mise run lint`    |
+| Preview the separate public website                       | `mise run website` |
 
-The desktop command starts and manages its own Next.js server. Its launcher selects an available port,
-then supplies that same port to Next.js, Tauri's development URL, and the live-reload security policy.
-There is no need to edit configuration when another application occupies port 3000. Stop development with Ctrl+C.
-Only one Next.js development server can use this checkout at a time; stop the browser preview before starting desktop development.
-Frontend changes reload automatically; Rust changes rebuild the desktop runtime.
+The developer runs `mise run dev` in their own terminal and keeps it running during development. Frontend edits use Fast Refresh; Rust edits rebuild and
+restart the application. Persisted library data survives restarts; unsaved interface state may reset.
+If dependency/tooling changes or a stopped watcher require a restart, the developer restarts it.
 
-The browser preview is useful for layout and frontend work. Native APIs are available only inside Tauri;
-the version footer detects the desktop runtime before requesting its version.
+Desktop development uses port 3000. Stop any conflicting server first. Tauri manages its own frontend
+server and uses the configured port consistently for the window and live reload. Stop development with Ctrl+C.
+The frontend's npm development script exists for Tauri's startup hook; a standalone browser has no Rust
+backend and cannot manage the library or open local PDFs. It is not a separate supported daily workflow.
+See [Storage](storage.md) for persistent data and removal behavior.
 
-Keep `mise run desktop` running during active development. It manages both the Next.js development server
-and Rust application: frontend edits use Fast Refresh; Rust edits trigger an automatic rebuild and application
-restart. You do not rerun the command for each edit. Persisted library data survives restarts; unsaved UI state
-may reset. Restart the command after changing dependencies or development tooling, or if a watcher stops.
+### Development-server ownership
 
-`mise run dev` is a layout-only browser preview. It has no Rust backend and cannot manage your library or open
-local PDFs. Use desktop development for file/folder operations. See [Storage](storage.md) for persistence and removal behavior.
+The developer starts and owns the development environment. Agents do not run `mise run dev`, `mise run website`,
+or equivalent direct npm/Tauri/Astro development commands. Do not launch a temporary server, use another port,
+or start a background replacement to get around this rule.
+
+For an agent task that needs the running app or website:
+
+1. Use the existing developer-started environment. Read-only checks of its availability are allowed.
+2. If it is not running or cannot be reached, report which environment is unavailable. Ask the developer to run
+   `mise run dev` for the desktop app or `mise run website` for the public site.
+3. Wait for the developer's response confirming that they started the environment before continuing dependent
+   UI verification. Elapsed time is not confirmation. Verify availability after the response; report any remaining failure.
+4. Continue independent edits, documentation, and non-server checks while waiting. Do not report UI verification
+   as passed until it was actually performed. A frontend HTTP response alone does not prove the native app is ready.
+
+Agents must not stop or restart the developer's environment unless explicitly asked. If a restart is needed,
+report the reason and wait for the developer to restart it and confirm. Linting, type checks, tests, and production
+builds are separate from starting a development server. If a production build would conflict with the running
+checkout, ask the developer to stop it or use an isolated checkout; do not stop it yourself.
 
 ### Linux rendering
 
@@ -67,7 +81,7 @@ in settings and PDFs. Accelerated compositing stays enabled; other platforms are
 The workaround also applies to packaged desktop builds. It may cost performance on otherwise unaffected systems.
 
 Explicit environment values take precedence. To test the original DMA-BUF path, start with
-`WEBKIT_DISABLE_DMABUF_RENDERER=0 mise run desktop`.
+`WEBKIT_DISABLE_DMABUF_RENDERER=0 mise run dev`.
 `WEBKIT_DISABLE_COMPOSITING_MODE=1` was used only to diagnose the issue; do not keep that variable set
 for normal development, since it disables accelerated compositing entirely.
 
@@ -75,45 +89,27 @@ In the PDF reader, click or Ctrl+click a document link to navigate within the cu
 links open in the system browser. Hold Ctrl while scrolling over a PDF to zoom around the pointer;
 release Ctrl to scroll normally. Wheel zoom switches out of fit-to-width or fit-to-height mode.
 
-## Verification
+## Verification and builds
 
-```bash
-npm run check
-npm run build
-npm run desktop:check
-prek run --all-files
-```
+`mise run lint` modifies files. Biome handles supported web files, including complete Astro files, CSS with Tailwind
+directives, SVG, YAML, and Markdown. Git-ignored output and generated package lockfiles are excluded. Astro
+markup support is experimental in the pinned Biome version; keep Astro type checks as well. Rust formatting
+remains with Cargo, and the existing Markdown, TOML, and shell hooks still apply. Review the diff before committing. CI separately checks Biome, frontend types,
+Rust formatting, Clippy, and Rust tests without applying source fixes; see [the workflow](../.github/workflows/ci.yml).
+For a documentation change, run relevant hooks with `prek run --files <changed-files>`.
 
-`npm run check` runs the pinned project-local Biome formatter/linter/import checks and TypeScript.
-Route types are generated before type checking.
-Use `npm run format` for formatting and `npm run lint:fix` for safe lint/import fixes.
-The pre-commit hook runs Biome on supported changed files; CI uses the same root check command.
-`npm run build` exports the frontend to `packages/src-nextjs/out/`.
-`npm run desktop:check` checks Rust formatting, runs Clippy with warnings as errors, and runs Rust tests.
-It requires the native development libraries above. `mise run check` runs both frontend and Rust checks.
-
-CI runs repository checks and Linux application checks. Other desktop platforms require their own verification.
-
-## Desktop builds
-
-```bash
-# Compile a local debug desktop executable without producing installers.
-npm run tauri -- build --debug --no-bundle -- --locked
-
-# Build an optimized executable and the host platform's installable bundles.
-npm run desktop:build
-```
-
-Both commands build the static frontend first. The packaged application loads those assets without a Next.js
-server or Node.js runtime. Build outputs live under `packages/src-tauri/target/`.
-Use the host operating system for its bundles; this setup does not promise cross-compilation.
-Signing, update distribution, and release publishing are not configured yet. These commands are local build
-entry points for future release automation; they do not create a GitHub release.
+`mise run build` exports the frontend and builds the native Debian package. The installed application does
+not need a Next.js server or Node.js runtime. The developer stops the checkout's development server before a production build,
+or build from an isolated checkout. See [Building and releasing](releasing.md) for prerequisites, output paths,
+installation, and the release checklist. A successful build does not establish installed-app behavior.
 
 ## Structure and boundaries
 
 | Path                                 | Responsibility                                                     |
 | ------------------------------------ | ------------------------------------------------------------------ |
+| `website/`                           | Standalone public Astro site and user-facing guides                |
+| `docs/`                              | Developer documentation and architecture decisions                 |
+| `scripts/`                           | Repository entry and setup scripts                                 |
 | `packages/src-nextjs/app/`           | Next.js routes, root layout, and styles                            |
 | `packages/src-nextjs/components/`    | Reusable React UI and client-side native integration               |
 | `packages/src-nextjs/public/`        | Static assets and the source application icon                      |
@@ -121,16 +117,17 @@ entry points for future release automation; they do not create a GitHub release.
 | `packages/src-tauri/tauri.conf.json` | Desktop identity, window, development URL, build commands, and CSP |
 | `packages/src-tauri/capabilities/`   | Permissions granted to specific windows                            |
 
-The root npm workspace owns the shared `package-lock.json`, Tauri CLI dependency, and orchestration commands.
+The root npm manifest owns workspace membership, shared tooling dependencies, and dependency overrides.
+Repository orchestration commands live in `mise.toml`; package-specific scripts stay with their packages.
 Next.js configuration and dependencies belong to `packages/src-nextjs/`. Rust dependencies are managed separately
 by `packages/src-tauri/Cargo.toml` and its Cargo lockfile; the Rust package does not need a `package.json`.
 Run the commands above from the repository root.
 
 Tauri's [documented default](https://v2.tauri.app/start/project-structure/) places the frontend at the root and Rust
 in `src-tauri/`. Locus uses a custom layout to keep application code under `packages/` and leave room for shared packages.
-`packages/src-tauri/scripts/tauri.mjs` uses the CLI's supported `TAURI_APP_PATH` and `TAURI_FRONTEND_PATH` variables to select the Rust
-package and root orchestration directory explicitly. This avoids depending on automatic directory discovery.
-The root `scripts/` folder contains only the project entry and setup shell scripts.
+The Mise desktop tasks run in `packages/src-tauri/` and invoke the official Tauri CLI directly.
+Frontend hooks select the Next.js workspace through npm. The root `scripts/` folder contains only project
+entry and setup shell scripts.
 Additional JavaScript packages can be added to the root `workspaces` list when needed.
 
 The frontend uses Next.js static export, following the [Tauri integration guide](https://v2.tauri.app/start/frontend/nextjs/).
@@ -158,7 +155,7 @@ system color scheme until a light/dark preference is selected; the preference is
 Add components from the repository root using the pinned frontend CLI:
 
 ```bash
-npm run ui -- add button
+npm run ui --workspace @locus/nextjs -- add button
 ```
 
 The interface fills the viewport, with an independently collapsible application rail and contextual navigation,
@@ -207,9 +204,9 @@ PDF scrollbars reserve their own lane; fit-to-width suppresses transient horizon
 Excalidraw Library is hidden. Alt+P toggles the full canvas interface, including tools, properties, and footer controls. See [Workbench](workbench.md) for command scopes and preferences.
 PDF pins, typed-note editing, and top-bar resizing remain planned.
 
-Excalidraw loads only on the client, following its Next.js integration. The root npm overrides update its
-Lodash and Nano ID dependencies to patched versions. The current runtime audit still reports four inherited
-low-severity entries from Mermaid/KaTeX; it reports no moderate, high, or critical runtime advisories.
+Excalidraw loads only on the client, following its Next.js integration. The root npm overrides constrain
+selected transitive dependencies; inspect the current dependency audit when changing them rather than relying
+on a historical advisory count.
 
 ## Repository tools and documentation
 
@@ -217,7 +214,45 @@ low-severity entries from Mermaid/KaTeX; it reports no moderate, high, or critic
 - prek runs repository checks; Commitizen checks Conventional Commit messages.
 - rumdl, ShellCheck, and Tombi check Markdown, shell scripts, and TOML.
 - `tombi format --offline` formats TOML without schema lookups.
-- `mise run docs` previews the documentation; `uvx zensical build --clean` builds it.
-- Published documentation uses [locus.hyperoot.dev](https://locus.hyperoot.dev/).
+- Developer documentation is Markdown in `docs/`; start at [the index](index.md).
+- The independent Astro site lives in `website/` and has its own package and lockfile.
+- Run `npm --prefix website ci`, then `mise run website` to preview it; `npm --prefix website run build` builds it.
+- The public website uses [locus.hyperoot.dev](https://locus.hyperoot.dev/).
 
 See the [contribution guide](https://github.com/HYP3R00T/Locus/blob/main/CONTRIBUTING.md) for the review workflow.
+
+## Working rules
+
+Follow [CONTRIBUTING.md](../CONTRIBUTING.md) for issue readiness, branches, ownership, and review. Preserve unrelated
+changes and use a feature branch. Complete authorized implementation and verification without repeatedly asking
+permission; authorization for one action does not imply authorization for a later publication step.
+
+Do not stage, commit, push, open a PR, merge, release, deploy, or send external messages without explicit authorization
+for that action. No unattended task execution, retry budget, or automated rollback policy is configured by these docs.
+Report missing requirements or failed checks in the current task; continue independent authorized work. Do not change
+policy to authorize your own pending action, bypass checks, or reset unrelated work to make validation pass.
+
+The GitHub Project distinguishes Backlog, Ready, In Progress, In Review, Blocked, Done, and Not Planned. Ready means
+approved and unblocked; review feedback remains In Review. A board status is not a grant of commit or release authority.
+
+### Commands and side effects
+
+Working directory: repository root. Repository task definitions live in [mise.toml](../mise.toml); package scripts live in their respective manifests.
+Root [package.json](../package.json) declares workspace metadata and tooling dependencies. Hook definitions live in [.pre-commit-config.yaml](../.pre-commit-config.yaml),
+formatting/lint rules in [biome.json](../biome.json), and CI in [.github/workflows/](../.github/workflows/).
+The site uses its own [package and lockfile](../website/package.json); Cargo uses its own manifest and lockfile.
+
+| Command                          | Check or modification                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `npm ci`                         | Installs the app's locked dependencies; replaces root `node_modules/`                  |
+| `mise run dev`                   | Starts desktop development; native operations can change study data                    |
+| `mise run build`                 | Builds the native Debian package and generated frontend assets                         |
+| `mise run lint`                  | Intentionally formats source and applies safe lint/import fixes                        |
+| `prek run --all-files`           | Checks tracked files; some hooks fix whitespace/formatting; inspect the resulting diff |
+| `npm --prefix website run check` | Checks the standalone website; writes generated type metadata                          |
+| `npm --prefix website run build` | Builds static website output; no local publication                                     |
+
+Untracked new files are not covered by `prek run --all-files`; pass them explicitly with `prek run --files` when
+verifying an uncommitted change. Checks do not authorize dependency upgrades. Run only relevant verification and
+distinguish formatting, type checks, tests, builds, and manual desktop behavior in the report. Unavailable platforms
+and installed-app tests remain unverified until exercised; do not infer them from CI configuration or a successful build.

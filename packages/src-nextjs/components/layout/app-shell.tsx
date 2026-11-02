@@ -449,7 +449,7 @@ export function AppShell() {
         <div className="flex h-full min-w-0 flex-1 flex-col">
           {data.ready && !data.native && (
             <p className="border-b px-4 py-2 text-xs text-muted-foreground">
-              Layout preview only. Run mise run desktop for your workspaces, PDFs, and file access.
+              Open the Locus desktop app to access your workspaces, PDFs, and local files.
             </p>
           )}
           {data.error && (

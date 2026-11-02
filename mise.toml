@@ -1,5 +1,5 @@
 [tools]
-node = "24.22.2"
+node = "lts"
 prek = "latest"
 rumdl = "latest"
 shellcheck = { version = "latest", os = ["linux", "macos"] }
@@ -20,30 +20,23 @@ enter = { run = "bash ./scripts/enter_project.sh" }
 [env]
 _.file = ".env"  # for sensitive data
 
-[tasks.docs]
-description = "Serve the documentation locally"
-run = "uvx zensical serve"
-
-[tasks.install]
-description = "Install locked workspace dependencies"
-run = "npm ci"
-
 [tasks.dev]
-description = "Start the Next.js frontend on an available local port"
-run = "npm run dev"
-
-[tasks.desktop]
-description = "Start Tauri with the Next.js development server"
-run = "npm run desktop:dev"
-
-[tasks.check]
-description = "Check frontend types and lint, then Rust formatting, lints, and tests"
-run = ["npm run check", "npm run desktop:check"]
+description = "Develop the desktop application"
+dir = "{{config_root}}/packages/src-tauri"
+run = "npm exec -- tauri dev"
 
 [tasks.build]
-description = "Build the static frontend"
-run = "npm run build"
+description = "Build a Debian installer"
+dir = "{{config_root}}/packages/src-tauri"
+run = "npm exec -- tauri build --bundles deb -- --locked"
 
-[tasks."build:desktop"]
-description = "Build the desktop application and native bundles"
-run = "npm run desktop:build"
+[tasks.lint]
+description = "Format source and apply safe lint fixes"
+run = [
+  "npm exec -- biome check --write .",
+  "cargo fmt --manifest-path packages/src-tauri/Cargo.toml --all",
+]
+
+[tasks.website]
+description = "Preview the standalone website"
+run = "npm --prefix website run dev"

@@ -55,8 +55,15 @@ jobs:
       - name: Install locked workspace dependencies
         run: npm ci
       - name: Check frontend
-        run: npm run check
+        run: |
+          npm exec -- biome check .
+          npm run typecheck --workspace @locus/nextjs
       - name: Check Rust
-        run: npm run desktop:check
+        working-directory: packages/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
       - name: Build desktop executable without installers
-        run: npm run tauri -- build --debug --no-bundle -- --locked
+        working-directory: packages/src-tauri
+        run: npm exec -- tauri build --debug --no-bundle -- --locked
