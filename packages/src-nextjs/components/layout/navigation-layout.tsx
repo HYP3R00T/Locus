@@ -84,7 +84,7 @@ export function NavigationLayout({
   }
 
   return (
-    <div className="h-full min-h-0 min-w-0 bg-context-surface pb-1 pr-1">
+    <div className="h-full min-h-0 min-w-0 bg-context-surface p-1">
       <ResizablePanelGroup
         orientation="horizontal"
         className="h-full! min-w-0"

@@ -11,11 +11,17 @@ The palette includes material selection, whiteboard creation, navigation, prefer
 closing, and **Split Vertically** / **Split Horizontally**. Split commands create empty panes; selecting a material is a separate action. Disabled actions remain visible with their current shortcut.
 The maximum remains two columns, each with up to two rows.
 
+Navigation and title-bar controls, theme/window buttons, and PDF toolbar fields use shadcn Base UI tooltips
+on hover or keyboard focus. Command hints resolve the current preference binding, including custom overrides;
+an unassigned shortcut is omitted. Ctrl/Command labels follow the platform. The shared provider uses a
+400 ms hover delay. Native `title` hints are removed from these controls to avoid duplicate popups.
+
 The miniature layout in the title bar shows each pane and highlights the active one. Click a cell to focus its pane.
 Drag a non-empty cell onto another pane to swap views, or to an allowed edge to create a split. Materials can also
 be dragged directly from the sidebar. Existing whiteboards move instead of opening competing editors.
 The two navigation columns share one outer frame. Study panes and Preferences use the same thin borders and small
-rounded corners, without inset editor padding. The active pane is marked in the title-bar map; container borders
+rounded corners, without inset editor padding. The work area has a uniform four-pixel outer inset, including
+the left edge of navigation and the space below the title bar. The active pane is marked in the title-bar map; container borders
 remain unchanged when focus moves. Six-pixel gutters have three-dot grips and highlight across the entire gap
 on hover, dragging, or keyboard focus, keeping their hit areas separate from content scroll containers.
 

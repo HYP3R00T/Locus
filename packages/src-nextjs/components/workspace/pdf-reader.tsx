@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ActionTooltip } from "@/components/workbench/action-tooltip";
 import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { desktop, type StudyDocument } from "@/lib/library";
 import { wheelZoomScale } from "@/lib/pdf-interactions";
@@ -365,35 +366,39 @@ export function PdfReader({
           <label htmlFor={pageField} className="sr-only">
             Page number
           </label>
-          <input
-            id={pageField}
-            ref={pageInput}
-            name="page"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            value={draft ?? String(pageIndex + 1)}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              setDraft(null);
-              setPageError(null);
-            }}
-            disabled={!count}
-            className="h-7 w-14 border bg-background px-2 text-center"
-          />
+          <ActionTooltip label="Go to page — enter a number and press Enter" command="pdf.page">
+            <input
+              id={pageField}
+              ref={pageInput}
+              name="page"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              value={draft ?? String(pageIndex + 1)}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => {
+                setDraft(null);
+                setPageError(null);
+              }}
+              disabled={!count}
+              className="h-7 w-14 border bg-background px-2 text-center"
+            />
+          </ActionTooltip>
           <span className="text-muted-foreground">/ {count || "…"}</span>
         </form>
         <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom out"
-            disabled={!count || zoom <= 0.25}
-            onClick={() => changeZoom(-1)}
-          >
-            <ZoomOutIcon />
-          </Button>
+          <ActionTooltip label="Zoom out" command="pdf.zoomOut">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Zoom out"
+              disabled={!count || zoom <= 0.25}
+              onClick={() => changeZoom(-1)}
+            >
+              <ZoomOutIcon />
+            </Button>
+          </ActionTooltip>
           <Select
             value={selectedZoom}
             disabled={!count}
@@ -401,15 +406,17 @@ export function PdfReader({
               if (value !== null) selectZoom(value);
             }}
           >
-            <SelectTrigger size="sm" aria-label="PDF zoom" className="max-w-48">
-              <SelectValue>
-                {zoomPreset === "page-width"
-                  ? `Fit to width (${Math.round(zoom * 100)}%)`
-                  : zoomPreset === "page-height"
-                    ? `Fit to height (${Math.round(zoom * 100)}%)`
-                    : `${Math.round(zoom * 100)}%`}
-              </SelectValue>
-            </SelectTrigger>
+            <ActionTooltip label="Choose zoom or fit mode — Ctrl+scroll also zooms">
+              <SelectTrigger size="sm" aria-label="PDF zoom" className="max-w-48">
+                <SelectValue>
+                  {zoomPreset === "page-width"
+                    ? `Fit to width (${Math.round(zoom * 100)}%)`
+                    : zoomPreset === "page-height"
+                      ? `Fit to height (${Math.round(zoom * 100)}%)`
+                      : `${Math.round(zoom * 100)}%`}
+                </SelectValue>
+              </SelectTrigger>
+            </ActionTooltip>
             <SelectContent align="end" alignItemWithTrigger={false}>
               <SelectItem value="page-width">Fit to width</SelectItem>
               <SelectItem value="page-height">Fit to height</SelectItem>
@@ -425,15 +432,17 @@ export function PdfReader({
               )}
             </SelectContent>
           </Select>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom in"
-            disabled={!count || zoom >= 5}
-            onClick={() => changeZoom(1)}
-          >
-            <ZoomInIcon />
-          </Button>
+          <ActionTooltip label="Zoom in" command="pdf.zoomIn">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Zoom in"
+              disabled={!count || zoom >= 5}
+              onClick={() => changeZoom(1)}
+            >
+              <ZoomInIcon />
+            </Button>
+          </ActionTooltip>
         </div>
       </div>
       {(pageError || positionError || linkError) && (

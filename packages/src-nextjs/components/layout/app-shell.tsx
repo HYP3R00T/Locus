@@ -356,6 +356,7 @@ export function AppShell() {
                   compact
                   aria-label={navigationLabel}
                   title={navigationLabel}
+                  command="navigation.primary"
                   aria-expanded={navigationExpanded}
                   aria-controls="primary-navigation"
                   onClick={() => setNavigationExpanded(!navigationExpanded)}
@@ -377,6 +378,7 @@ export function AppShell() {
                 compact={!navigationExpanded}
                 aria-label="Create workspace"
                 title="Create workspace"
+                command="workspace.new"
                 disabled={!data.ready || data.busy || !data.native}
                 onClick={() => openCreate("workspace")}
               >
@@ -387,6 +389,7 @@ export function AppShell() {
                 compact={!navigationExpanded}
                 aria-label="Settings"
                 title="Settings"
+                command="preferences"
                 aria-pressed={view === "settings"}
                 className={cn("mt-2", view === "settings" && "bg-sidebar-accent")}
                 onClick={() => {
@@ -412,6 +415,7 @@ export function AppShell() {
                   compact
                   aria-label={contextLabel}
                   title={contextLabel}
+                  command="navigation.materials"
                   aria-expanded={contextExpanded}
                   aria-controls="context-navigation"
                   onClick={() => setContextExpanded(!contextExpanded)}
@@ -437,6 +441,7 @@ export function AppShell() {
                   compact
                   aria-label={view === "settings" ? "Show preferences" : "Show materials"}
                   title={view === "settings" ? "Preferences" : "Materials"}
+                  command="navigation.materials"
                   onClick={() => setContextExpanded(true)}
                 >
                   {view === "settings" ? <PaletteIcon /> : <FolderIcon />}
