@@ -1,7 +1,3 @@
----
-icon: lucide/command
----
-
 # Workbench
 
 Commands, preferences, and keyboard dispatch share one frontend workbench provider. The title bar is the common
@@ -34,11 +30,11 @@ while resizing. Fixed zoom and fit-to-height still allow horizontal scrolling wh
 The shell registers application commands; each mounted PDF reader registers its own handlers under its pane ID.
 Toolbar buttons, palette items, and shortcuts invoke the same command handlers and availability checks.
 
-| Scope | Availability |
-| --- | --- |
-| Global | Anywhere in the application when the action is available |
-| PDF | Only the active, loaded PDF reader |
-| Whiteboard | Only when a whiteboard pane is active |
+| Scope      | Availability                                             |
+| ---------- | -------------------------------------------------------- |
+| Global     | Anywhere in the application when the action is available |
+| PDF        | Only the active, loaded PDF reader                       |
+| Whiteboard | Only when a whiteboard pane is active                    |
 
 Global here means application-wide, not a system-wide hotkey while another application is focused.
 Text fields keep their normal keys except the explicit palette, close-pane, and canvas-controls shortcuts.
