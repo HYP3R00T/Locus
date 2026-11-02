@@ -11,8 +11,13 @@ test("an occupied port is skipped and the desktop URL and live reload stay synch
   await once(occupied, "listening");
   t.after(() => new Promise((resolve) => occupied.close(resolve)));
   const port = occupied.address().port;
-  const config = JSON.parse(await readFile(new URL("../packages/src-tauri/tauri.conf.json", import.meta.url), "utf8"));
-  config.app.security.devCsp = config.app.security.devCsp.replace("ws://127.0.0.1:3000", `ws://127.0.0.1:${port}`);
+  const config = JSON.parse(
+    await readFile(new URL("../packages/src-tauri/tauri.conf.json", import.meta.url), "utf8"),
+  );
+  config.app.security.devCsp = config.app.security.devCsp.replace(
+    "ws://127.0.0.1:3000",
+    `ws://127.0.0.1:${port}`,
+  );
   config.build.devUrl = `http://127.0.0.1:${port}`;
 
   const result = await resolveDevConfig(config);

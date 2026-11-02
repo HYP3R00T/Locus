@@ -18,11 +18,13 @@ export function AboutDialog() {
         <DialogHeader>
           <DialogTitle>A space for understanding</DialogTitle>
           <DialogDescription>
-            Locus is being built for reading, writing, and connecting ideas across your study materials.
+            Locus is being built for reading, writing, and connecting ideas across your study
+            materials.
           </DialogDescription>
         </DialogHeader>
         <p className="text-muted-foreground">
-          This is the beginning of that workspace. PDF reading, drawings, and linked notes are coming next.
+          This is the beginning of that workspace. PDF reading, drawings, and linked notes are
+          coming next.
         </p>
       </DialogContent>
     </Dialog>

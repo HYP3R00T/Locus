@@ -40,3 +40,11 @@ repos:
     rev: v1.7.3
     hooks:
       - id: tombi-format
+
+  - repo: local
+    hooks:
+      - id: biome
+        name: Biome
+        entry: npm exec -- biome check --no-errors-on-unmatched
+        language: system
+        files: '\.(?:[cm]?[jt]sx?|css|jsonc?)$'

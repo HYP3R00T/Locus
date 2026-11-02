@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
 @import "tw-animate-css";
+@import "pdfjs-dist/web/pdf_viewer.css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -132,18 +133,6 @@
   }
   html {
     @apply font-sans;
-  }
-}
-
-/* Animate collapse, but keep pointer resizing immediate and reduced-motion safe. */
-.navigation-panels > #application-navigation-panel,
-.navigation-panels > #study-navigation-panel {
-  clip-path: inset(0);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .navigation-panels:not([data-resizing="true"]) > [data-panel] {
-    transition: flex-grow 200ms ease-out;
   }
 }
 

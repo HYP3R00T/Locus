@@ -1,5 +1,5 @@
-import path from "node:path";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cli from "@tauri-apps/cli";
 import { resolveDevConfig } from "./dev-config.mjs";
@@ -14,7 +14,9 @@ process.env.TAURI_FRONTEND_PATH = root;
 try {
   const args = process.argv.slice(2);
   if (args[0] === "dev") {
-    const config = JSON.parse(await readFile(path.join(process.env.TAURI_APP_PATH, "tauri.conf.json"), "utf8"));
+    const config = JSON.parse(
+      await readFile(path.join(process.env.TAURI_APP_PATH, "tauri.conf.json"), "utf8"),
+    );
     const { port, override } = await resolveDevConfig(config);
     // An explicit PORT prevents Next.js from falling back independently of Tauri.
     process.env.PORT = String(port);

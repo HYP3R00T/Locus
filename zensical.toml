@@ -10,6 +10,7 @@ copyright = "Copyright &copy; 2026 HYP3R00T"
 nav = [
   { Home = "index.md" },
   { "Getting started" = "getting-started.md" },
+  { Storage = "storage.md" },
   { "Project direction" = "project-direction.md" },
 ]
 

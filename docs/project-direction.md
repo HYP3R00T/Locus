@@ -9,11 +9,13 @@ icon: lucide/compass
 Locus is a personal workspace for studying books and papers, taking handwritten or typed notes,
 and connecting ideas across materials. It should support independent study first, with optional agent assistance later.
 
-**Status: interface foundation.** The Next.js frontend and Tauri shell are present, with a full-width workspace,
-resizable and collapsible navigation, settings, and a sample subject → study space → material hierarchy.
-The sample Physics subject contains Classical mechanics, grouped into books, research papers, and problem solving.
-These entries demonstrate navigation only; subjects and materials cannot yet be created or saved.
-The study and research capabilities described below are planned, not implemented.
+**Status: PDF library and reader.** The desktop app creates workspaces and one-level logical folders,
+attaches existing PDFs without copying them, and restores per-workspace reading positions.
+PDF.js provides continuous vertical reading with nearby-page rendering, selectable text, Enter-to-jump page entry,
+zoom, and password entry. Context menus support display-name changes and removal; PDFs can move between
+logical folders and the workspace root by dragging or using the menu.
+SQLite stores references and reading state; original PDFs remain outside application storage.
+Excalidraw, pins, Markdown editing, and AI are not implemented.
 
 ## First prototype
 
@@ -53,7 +55,7 @@ A static frontend can still load documents, update the interface, and call Rust 
 Next.js runtime server features are outside this architecture: backend operations belong in Rust rather than
 Server Actions or request-time Next.js handlers. Build-time rendering remains possible.
 
-A PDF rendering library and database have not been selected. The frontend lives in `packages/src-nextjs/`,
+PDF.js provides rendering; SQLite stores library metadata. See [Storage](storage.md) for ownership and schema. The frontend lives in `packages/src-nextjs/`,
 with the Rust application directly in `packages/src-tauri/`. See [Getting started](getting-started.md) for development and build commands.
 
 ## Later capabilities
