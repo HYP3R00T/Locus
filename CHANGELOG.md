@@ -8,6 +8,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Show action hints and current keyboard shortcuts in tooltips on navigation, title-bar, and PDF controls.
 - Restore the main window's size and maximized state between sessions, with position restoration where supported.
 - Keep bounded local diagnostic logs for startup and native operation failures without recording study content.
 - Debian packaging is available for local testing.
@@ -23,6 +24,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Keep equal spacing around the workspace containers, including the left navigation edge.
 - Include the developer's name, license, project links, and application details in Debian packaging metadata.
 - Correct PDF page sizing to keep text sharp instead of shrinking the rendered page.
 - Work around a Linux rendering issue that blurred the interface at certain scroll positions.

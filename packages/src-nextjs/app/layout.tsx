@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkbenchProvider } from "@/components/workbench/workbench-provider";
 import "./globals.css";
 
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <ThemeProvider>
           <WorkbenchProvider>
-            <WindowFrame>{children}</WindowFrame>
+            <TooltipProvider delay={400}>
+              <WindowFrame>{children}</WindowFrame>
+            </TooltipProvider>
           </WorkbenchProvider>
         </ThemeProvider>
       </body>
