@@ -1,0 +1,48 @@
+---
+import DocumentLayout from "../layouts/DocumentLayout.astro";
+---
+
+<DocumentLayout
+  title="Local installation"
+  description="How to test a local Debian build of Locus before the first public release."
+>
+  <h1>Try a local build.</h1>
+  <p>
+    Locus does not have a public installer yet. The current packaging work is for testing
+    Debian-based Linux systems locally.
+  </p>
+  <h2>If you already have a Debian package</h2>
+  <p>
+    Open the folder containing the <code>.deb</code> file. You can install it with your system’s
+    software installer, or use:
+  </p>
+  <pre><code>sudo apt install ./Locus_0.1.0_amd64.deb</code></pre>
+  <p>
+    Use the actual filename of your package. Once installed, open <strong>Locus</strong> from your
+    application launcher. A packaged build does not need Node.js or a development server to run.
+  </p>
+  <h2>Building from source</h2>
+  <p>
+    This step currently needs development tools. The repository’s
+    <a href="https://github.com/HYP3R00T/Locus/blob/main/docs/releasing.md"
+      >build and release guide</a
+    >
+    lists the setup requirements and local build commands.
+  </p>
+  <pre><code>npm ci
+mise run build</code></pre>
+  <p>
+    Packages are written to <code>packages/src-tauri/target/release/bundle/deb/</code>. A local
+    build is not a public release and is not uploaded automatically.
+  </p>
+  <h2>Other platforms</h2>
+  <p>
+    Debian is the current packaging focus. Windows installers, AppImage, and Flatpak are possible
+    distribution options, but are not offered here as tested downloads.
+  </p>
+  <h2>Before relying on a development build</h2>
+  <p>
+    Keep backups of important drawings and study data. Try reading, drawing, closing, and reopening
+    the app before using a build for an extended study session.
+  </p>
+</DocumentLayout>

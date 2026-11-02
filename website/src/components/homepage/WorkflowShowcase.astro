@@ -1,0 +1,72 @@
+---
+import { Icon } from "astro-icon/components";
+import Section from "@/components/common/Section.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const steps = [
+  {
+    command: "Working now",
+    copy: "PDF reading, saved whiteboards, flexible panes, and configurable shortcuts.",
+  },
+  {
+    command: "Planned",
+    copy: "Pins linking a place in a PDF to a drawing, plus connected Markdown notes.",
+  },
+  {
+    command: "Local testing",
+    copy: "A Debian package can be built locally. There is no public installer yet.",
+  },
+];
+---
+
+<Section id="workflow">
+  <div class="grid lg:grid-cols-[minmax(0,0.7fr)_minmax(20rem,0.3fr)]">
+    <div
+      class="border-b border-border px-5 py-12 md:px-10 lg:border-r lg:border-b-0 lg:px-15 lg:py-18"
+    >
+      <p class="font-mono text-xs tracking-[0.14em] text-accent-1 uppercase">
+        A workspace in progress
+      </p>
+      <h2
+        class="mt-5 font-display text-4xl font-medium tracking-[-0.035em] text-foreground-0 md:text-5xl"
+      >
+        Useful today. Still taking shape.
+      </h2>
+
+      <ol class="mt-12 divide-y divide-border border-y border-border">
+        {steps.map((step, index) => (
+          <li class="grid gap-3 py-6 sm:grid-cols-[2rem_minmax(10rem,0.35fr)_minmax(0,0.65fr)] sm:items-start">
+            <span class="font-mono text-xs text-foreground-3">0{index + 1}</span>
+            <code class="font-mono text-sm font-medium text-foreground-0">{step.command}</code>
+            <p class="text-sm leading-6 text-foreground-2">{step.copy}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <div
+      class="flex flex-col justify-between gap-16 bg-foreground-0 px-5 py-12 text-background-0 md:px-10 lg:px-8 lg:py-18"
+    >
+      <div>
+        <p class="font-mono text-xs tracking-[0.14em] text-background-3 uppercase">
+          Follow the next chapter
+        </p>
+        <p class="mt-6 font-display text-3xl leading-tight font-medium tracking-tight">
+          Read the guide, follow completed changes, and see what is planned next.
+        </p>
+      </div>
+
+      <a
+        href="/changelog/"
+        class={cn(
+          buttonVariants({ variant: "secondary", size: "lg" }),
+          "h-11 w-fit border-background-3 bg-background-0 px-5 text-foreground-0 hover:bg-background-1",
+        )}
+      >
+        Read the changelog
+        <Icon name="arrow-up-right" class="size-4" aria-hidden="true" />
+      </a>
+    </div>
+  </div>
+</Section>
