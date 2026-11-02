@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import cli from "@tauri-apps/cli";
 import { resolveDevConfig } from "./dev-config.mjs";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
+const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 // Explicit paths keep discovery predictable as more packages are added.
 process.chdir(root);

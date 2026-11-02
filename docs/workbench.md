@@ -78,6 +78,19 @@ Excalidraw's partial Zen mode is held off so it does not compete with this singl
 One scoped CSS adapter targets `.layer-ui__wrapper`; review it when upgrading Excalidraw.
 These UI preferences do not alter drawing elements or saved scene files.
 
+## PDF links and wheel zoom
+
+PDF.js's annotation layer and `PDFLinkService` handle document destinations, including contents-page links.
+Click or Ctrl+click navigates within the same PDF pane while retaining its current zoom. External HTTP,
+HTTPS, email, and telephone links open in their system default applications through Tauri's opener plugin.
+Its capability grants URL opening only, without file-opening or directory-reveal access. Failed opens show
+an error in the viewer. The source PDF remains unchanged.
+
+Ctrl+scroll zooms the PDF under the pointer from 25% to 500%, leaving fit mode and keeping the pointer as
+the zoom origin. Ordinary scrolling remains unchanged. The listener is non-passive and limited to the PDF
+scroll area, preventing the WebView's document-level zoom. High-frequency gestures defer canvas redraws
+briefly through PDF.js's zoom API, then rerender at the final scale.
+
 ## Overlay rendering
 
 Dialogs and navigation sheets dim their backdrop without blurring it. Dialogs use the Base UI viewport

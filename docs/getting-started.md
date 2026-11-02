@@ -71,6 +71,10 @@ Explicit environment values take precedence. To test the original DMA-BUF path, 
 `WEBKIT_DISABLE_COMPOSITING_MODE=1` was used only to diagnose the issue; do not keep that variable set
 for normal development, since it disables accelerated compositing entirely.
 
+In the PDF reader, click or Ctrl+click a document link to navigate within the current pane. External web
+links open in the system browser. Hold Ctrl while scrolling over a PDF to zoom around the pointer;
+release Ctrl to scroll normally. Wheel zoom switches out of fit-to-width or fit-to-height mode.
+
 ## Verification
 
 ```bash
@@ -80,8 +84,8 @@ npm run desktop:check
 prek run --all-files
 ```
 
-`npm run check` runs the pinned project-local Biome formatter/linter/import checks, TypeScript, and the
-development port regression test. Route types are generated before type checking.
+`npm run check` runs the pinned project-local Biome formatter/linter/import checks and TypeScript.
+Route types are generated before type checking.
 Use `npm run format` for formatting and `npm run lint:fix` for safe lint/import fixes.
 The pre-commit hook runs Biome on supported changed files; CI uses the same root check command.
 `npm run build` exports the frontend to `packages/src-nextjs/out/`.
@@ -124,8 +128,9 @@ Run the commands above from the repository root.
 
 Tauri's [documented default](https://v2.tauri.app/start/project-structure/) places the frontend at the root and Rust
 in `src-tauri/`. Locus uses a custom layout to keep application code under `packages/` and leave room for shared packages.
-`scripts/tauri.mjs` uses the CLI's supported `TAURI_APP_PATH` and `TAURI_FRONTEND_PATH` variables to select the Rust
+`packages/src-tauri/scripts/tauri.mjs` uses the CLI's supported `TAURI_APP_PATH` and `TAURI_FRONTEND_PATH` variables to select the Rust
 package and root orchestration directory explicitly. This avoids depending on automatic directory discovery.
+The root `scripts/` folder contains only the project entry and setup shell scripts.
 Additional JavaScript packages can be added to the root `workspaces` list when needed.
 
 The frontend uses Next.js static export, following the [Tauri integration guide](https://v2.tauri.app/start/frontend/nextjs/).
