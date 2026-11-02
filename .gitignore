@@ -50,3 +50,5 @@ packages/src-tauri/gen/
 
 # Copied from the locked PDF.js package before development/build.
 /packages/src-nextjs/public/pdfjs/
+
+/packages/src-nextjs/public/excalidraw/

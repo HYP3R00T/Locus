@@ -4,15 +4,19 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FolderIcon,
-  MenuIcon,
+  KeyboardIcon,
   PaletteIcon,
+  PenLineIcon,
   PlusIcon,
   Settings2Icon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { NavigationLayout } from "@/components/layout/navigation-layout";
-import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import {
+  type PreferenceSection,
+  PreferencesSettings,
+} from "@/components/settings/preferences-settings";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -35,9 +39,13 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
-import { PdfReader } from "@/components/workspace/pdf-reader";
+import {
+  useCommandHandlers,
+  useMaterialOptions,
+  useWorkbench,
+} from "@/components/workbench/workbench-context";
+import { StudyArea } from "@/components/workspace/study-area";
 import { type Removal, StudyTree } from "@/components/workspace/study-tree";
 import { useLibrary } from "@/components/workspace/use-library";
 import { cn } from "@/lib/utils";
@@ -45,6 +53,7 @@ import { cn } from "@/lib/utils";
 export function AppShell() {
   const data = useLibrary();
   const [view, setView] = useState<"workspace" | "settings">("workspace");
+  const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("appearance");
   const [navigationExpanded, setNavigationExpanded] = useState(false);
   const [contextExpanded, setContextExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,6 +61,165 @@ export function AppShell() {
   const [title, setTitle] = useState("");
   const [rename, setRename] = useState<Removal | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
+  const workbench = useWorkbench();
+  const liveData = useRef(data);
+  liveData.current = data;
+  const panes = data.layout.columns.flatMap((column) => column.panes);
+  function focusPane(id: string) {
+    setView("workspace");
+    data.activatePane(id);
+    requestAnimationFrame(() => {
+      const pane = document.querySelector<HTMLElement>(`[data-pane-id="${CSS.escape(id)}"]`);
+      (pane?.querySelector<HTMLElement>('[role="document"], .excalidraw') ?? pane)?.focus();
+    });
+  }
+  function focusCurrentPane() {
+    requestAnimationFrame(() => {
+      const pane = document.querySelector<HTMLElement>(
+        `[data-pane-id="${CSS.escape(liveData.current.layout.activeId)}"]`,
+      );
+      (pane?.querySelector<HTMLElement>('[role="document"], .excalidraw') ?? pane)?.focus();
+    });
+  }
+  const activeColumn = data.layout.columns.find((column) =>
+    column.panes.some((pane) => pane.id === data.layout.activeId),
+  );
+  const currentPane = panes.find((pane) => pane.id === data.layout.activeId);
+  const nextPane =
+    panes[(panes.findIndex((pane) => pane.id === data.layout.activeId) + 1) % panes.length];
+  useCommandHandlers("app", {
+    "workspace.new": {
+      enabled: data.native && data.ready && !data.busy,
+      run: () => openCreate("workspace"),
+    },
+    "folder.new": {
+      enabled: data.native && !!data.workspace && !data.busy,
+      run: () => openCreate("folder"),
+    },
+    "pdf.add": {
+      enabled: data.native && !!data.workspace && !data.busy,
+      run: () => data.addPdf(data.selected?.folderId ?? null),
+    },
+    "whiteboard.new": {
+      enabled: data.native && !!data.workspace && !data.busy,
+      run: () => {
+        setView("workspace");
+        return data.createDrawing();
+      },
+    },
+    "layout.vertical": {
+      enabled: view === "workspace" && data.layout.columns.length < 2,
+      run: () => {
+        data.splitPane("columns", data.layout.activeId);
+        focusCurrentPane();
+      },
+    },
+    "layout.horizontal": {
+      enabled: view === "workspace" && (activeColumn?.panes.length ?? 2) < 2,
+      run: () => {
+        data.splitPane("rows", data.layout.activeId);
+        focusCurrentPane();
+      },
+    },
+    "pane.close": {
+      run: () => {
+        if (view === "settings") setView("workspace");
+        else data.closePane(data.layout.activeId);
+        focusCurrentPane();
+      },
+    },
+    "pane.next": { enabled: panes.length > 1, run: () => focusPane(nextPane.id) },
+    "pane.previous": {
+      enabled: panes.length > 1,
+      run: () =>
+        focusPane(
+          panes[
+            (panes.findIndex((pane) => pane.id === data.layout.activeId) + panes.length - 1) %
+              panes.length
+          ].id,
+        ),
+    },
+    "pane.swap": {
+      enabled:
+        view === "workspace" && panes.length > 1 && !!(currentPane?.content || nextPane?.content),
+      run: () => {
+        if (currentPane?.content)
+          data.dropContent(nextPane.id, currentPane.content, "center", currentPane.id);
+        else if (nextPane?.content)
+          data.dropContent(data.layout.activeId, nextPane.content, "center", nextPane.id);
+        focusCurrentPane();
+      },
+    },
+    "navigation.primary": { run: () => setNavigationExpanded((value) => !value) },
+    "navigation.materials": {
+      run: () =>
+        window.matchMedia("(max-width: 767px)").matches
+          ? setMobileOpen((value) => !value)
+          : setContextExpanded((value) => !value),
+    },
+    preferences: {
+      run: () => {
+        setView("settings");
+        setMobileOpen(false);
+      },
+    },
+  });
+  useMaterialOptions([
+    ...data.library.documents
+      .filter((item) => item.workspaceId === data.workspace?.id)
+      .map((item) => ({
+        id: `pdf:${item.id}`,
+        title: `PDF: ${item.title}`,
+        open: () => {
+          liveData.current.select(item.id);
+          setView("workspace");
+        },
+      })),
+    ...data.library.drawings
+      .filter((item) => item.workspaceId === data.workspace?.id)
+      .map((item) => ({
+        id: `drawing:${item.id}`,
+        title: `Whiteboard: ${item.title}`,
+        open: () => {
+          liveData.current.openDrawing(item.id);
+          setView("workspace");
+        },
+      })),
+  ]);
+  useEffect(() => {
+    workbench.setInfo({
+      activeId: view === "workspace" ? data.layout.activeId : null,
+      scope:
+        view === "workspace"
+          ? (data.layout.columns
+              .flatMap((column) => column.panes)
+              .find((pane) => pane.id === data.layout.activeId)?.content?.kind ?? null)
+          : null,
+      focus: (id) => {
+        setView("workspace");
+        liveData.current.activatePane(id);
+        requestAnimationFrame(() => {
+          const pane = document.querySelector<HTMLElement>(`[data-pane-id="${CSS.escape(id)}"]`);
+          (pane?.querySelector<HTMLElement>('[role="document"], .excalidraw') ?? pane)?.focus();
+        });
+      },
+      columns: data.layout.columns.map((column) => ({
+        id: column.id,
+        panes: column.panes.map((pane) => ({
+          id: pane.id,
+          kind: pane.content?.kind ?? null,
+          title:
+            pane.content?.kind === "pdf"
+              ? (data.library.documents.find((item) => item.id === pane.content?.id)?.title ??
+                "PDF")
+              : pane.content?.kind === "drawing"
+                ? (data.library.drawings.find((item) => item.id === pane.content?.id)?.title ??
+                  "Whiteboard")
+                : "Empty pane",
+        })),
+      })),
+    });
+  }, [data.layout, data.library.documents, data.library.drawings, view, workbench.setInfo]);
   function openCreate(kind: "workspace" | "folder") {
     setTitle("");
     setCreate(kind);
@@ -60,11 +228,35 @@ export function AppShell() {
     data.chooseWorkspace(id);
     setView("workspace");
   }
+  const settingsNavigation = (
+    <nav aria-label="Settings categories" className="px-2">
+      {(
+        [
+          { id: "appearance", title: "Appearance", icon: PaletteIcon },
+          { id: "keybindings", title: "Key Bindings", icon: KeyboardIcon },
+          { id: "canvas", title: "Canvas", icon: PenLineIcon },
+        ] as const
+      ).map((section) => (
+        <NavigationAction
+          key={section.id}
+          aria-current={preferenceSection === section.id ? "page" : undefined}
+          className={cn(preferenceSection === section.id && "bg-sidebar-accent")}
+          onClick={() => {
+            setPreferenceSection(section.id);
+            setMobileOpen(false);
+          }}
+        >
+          <section.icon />
+          <span>{section.title}</span>
+        </NavigationAction>
+      ))}
+    </nav>
+  );
   const tree = (
     <StudyTree
       library={data.library}
       workspace={data.workspace}
-      selectedId={data.selected?.id}
+      selectedId={data.selected?.id ?? data.selectedDrawing?.id}
       disabled={data.busy || !data.ready || !data.native}
       onSelect={(item) => {
         data.select(item.id);
@@ -75,6 +267,14 @@ export function AppShell() {
         void data.addPdf(folder);
       }}
       onAddFolder={() => openCreate("folder")}
+      onAddDrawing={() => {
+        void data.createDrawing();
+      }}
+      onSelectDrawing={(id) => {
+        data.openDrawing(id);
+        setView("workspace");
+        setMobileOpen(false);
+      }}
       onRename={(item) => {
         setTitle(item.title);
         setRename(item);
@@ -229,23 +429,14 @@ export function AppShell() {
                 !contextExpanded && "hidden",
               )}
             >
-              {view === "workspace" ? (
-                tree
-              ) : (
-                <nav aria-label="Settings categories" className="px-2">
-                  <NavigationAction aria-current="true" className="bg-sidebar-accent">
-                    <PaletteIcon />
-                    <span>Appearance</span>
-                  </NavigationAction>
-                </nav>
-              )}
+              {view === "workspace" ? tree : settingsNavigation}
             </div>
             {!contextExpanded && (
               <nav aria-label="Compact workspace navigation" className="px-2">
                 <NavigationAction
                   compact
-                  aria-label={view === "settings" ? "Show appearance settings" : "Show materials"}
-                  title={view === "settings" ? "Appearance" : "Materials"}
+                  aria-label={view === "settings" ? "Show preferences" : "Show materials"}
+                  title={view === "settings" ? "Preferences" : "Materials"}
                   onClick={() => setContextExpanded(true)}
                 >
                   {view === "settings" ? <PaletteIcon /> : <FolderIcon />}
@@ -256,30 +447,6 @@ export function AppShell() {
         }
       >
         <div className="flex h-full min-w-0 flex-1 flex-col">
-          <header className="flex h-9 shrink-0 items-center gap-3 border-b border-border/50 px-3 sm:px-4">
-            <SheetTrigger
-              render={<Button variant="ghost" size="icon" className="md:hidden" />}
-              aria-label="Open navigation"
-            >
-              <MenuIcon />
-            </SheetTrigger>
-            <nav
-              aria-label="Breadcrumb"
-              className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground"
-            >
-              <span className="truncate">
-                {view === "settings" ? "Settings" : (data.workspace?.title ?? "Locus")}
-              </span>
-              {(view === "settings" || data.selected) && (
-                <>
-                  <ChevronRightIcon className="size-3 shrink-0" />
-                  <span className="truncate text-foreground">
-                    {view === "settings" ? "Appearance" : data.selected?.title}
-                  </span>
-                </>
-              )}
-            </nav>
-          </header>
           {data.ready && !data.native && (
             <p className="border-b px-4 py-2 text-xs text-muted-foreground">
               Layout preview only. Run mise run desktop for your workspaces, PDFs, and file access.
@@ -302,42 +469,23 @@ export function AppShell() {
               </Button>
             </div>
           )}
-          <main className="min-h-0 min-w-0 flex-1 overflow-auto">
+          <main
+            className={cn(
+              "min-h-0 min-w-0 flex-1",
+              view === "settings"
+                ? "locus-navigation-frame overflow-hidden bg-background"
+                : "overflow-hidden",
+            )}
+          >
             {view === "settings" ? (
-              <AppearanceSettings />
-            ) : data.selected ? (
-              <PdfReader
-                key={`${data.selected.workspaceId}:${data.selected.id}:${data.revision}`}
-                document={data.selected}
-                onPosition={data.savePosition}
-                onLocate={() => {
-                  void data.addPdf(data.selected?.folderId, data.selected?.id);
-                }}
-              />
+              <div
+                key={preferenceSection}
+                className="locus-settings-scroll h-full overflow-x-hidden overflow-y-auto bg-background"
+              >
+                <PreferencesSettings section={preferenceSection} />
+              </div>
             ) : (
-              <section className="flex min-h-full flex-col items-center justify-center gap-3 p-6 text-center">
-                <h1 className="text-sm font-medium">
-                  {data.ready
-                    ? (data.workspace?.title ?? "Your study workspace")
-                    : "Opening library…"}
-                </h1>
-                <p className="max-w-sm text-xs text-muted-foreground">
-                  {data.workspace
-                    ? "Attach a PDF or select a book from the sidebar to begin reading."
-                    : "Create a workspace for a subject, then attach your books."}
-                </p>
-                {data.ready && (
-                  <Button
-                    variant="outline"
-                    disabled={data.busy || !data.native}
-                    onClick={() =>
-                      data.workspace ? void data.addPdf(null) : openCreate("workspace")
-                    }
-                  >
-                    {data.workspace ? "Add PDF" : "Create workspace"}
-                  </Button>
-                )}
-              </section>
+              <StudyArea data={data} onCreateWorkspace={() => openCreate("workspace")} />
             )}
           </main>
         </div>
@@ -357,7 +505,9 @@ export function AppShell() {
             <span>Create workspace</span>
           </NavigationAction>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">{tree}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {view === "settings" ? settingsNavigation : tree}
+        </div>
         <div className="p-2">
           <NavigationAction
             onClick={() => {
@@ -446,16 +596,18 @@ export function AppShell() {
               e.preventDefault();
               if (!rename || !data.workspace) return;
               const ok = await data.mutate(
-                rename.kind === "document"
-                  ? {
-                      type: "renameDocument",
-                      workspaceId: data.workspace.id,
-                      documentId: rename.id,
-                      title: title.trim(),
-                    }
-                  : rename.kind === "folder"
-                    ? { type: "renameFolder", folderId: rename.id, title: title.trim() }
-                    : { type: "renameWorkspace", workspaceId: rename.id, title: title.trim() },
+                rename.kind === "drawing"
+                  ? { type: "renameDrawing", drawingId: rename.id, title: title.trim() }
+                  : rename.kind === "document"
+                    ? {
+                        type: "renameDocument",
+                        workspaceId: data.workspace.id,
+                        documentId: rename.id,
+                        title: title.trim(),
+                      }
+                    : rename.kind === "folder"
+                      ? { type: "renameFolder", folderId: rename.id, title: title.trim() }
+                      : { type: "renameWorkspace", workspaceId: rename.id, title: title.trim() },
               );
               if (ok) setRename(null);
             }}
@@ -505,8 +657,10 @@ export function AppShell() {
               {removal?.kind === "folder"
                 ? "Books in this folder will remain at the workspace root."
                 : removal?.kind === "workspace"
-                  ? "This removes the workspace and its PDF references and reading positions."
-                  : "This removes the PDF reference and its reading position from this workspace."}{" "}
+                  ? "This removes the workspace and its material references and reading positions. Whiteboard files are kept on disk."
+                  : removal?.kind === "drawing"
+                    ? "This removes the whiteboard reference. Its .excalidraw file is kept on disk."
+                    : "This removes the PDF reference and its reading position from this workspace."}{" "}
               Original PDF files stay on your device.
             </DialogDescription>
           </DialogHeader>
@@ -525,15 +679,17 @@ export function AppShell() {
               onClick={async () => {
                 if (!removal || !data.workspace) return;
                 const ok = await data.mutate(
-                  removal.kind === "workspace"
-                    ? { type: "removeWorkspace", workspaceId: removal.id }
-                    : removal.kind === "folder"
-                      ? { type: "removeFolder", folderId: removal.id }
-                      : {
-                          type: "removeDocument",
-                          workspaceId: data.workspace.id,
-                          documentId: removal.id,
-                        },
+                  removal.kind === "drawing"
+                    ? { type: "removeDrawing", drawingId: removal.id }
+                    : removal.kind === "workspace"
+                      ? { type: "removeWorkspace", workspaceId: removal.id }
+                      : removal.kind === "folder"
+                        ? { type: "removeFolder", folderId: removal.id }
+                        : {
+                            type: "removeDocument",
+                            workspaceId: data.workspace.id,
+                            documentId: removal.id,
+                          },
                 );
                 if (ok) setRemoval(null);
               }}

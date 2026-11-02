@@ -1,5 +1,5 @@
 "use client";
-import { BookOpenIcon, ChevronRightIcon, FolderIcon } from "lucide-react";
+import { BookOpenIcon, ChevronRightIcon, FolderIcon, PenLineIcon } from "lucide-react";
 import { type DragEvent, type ReactNode, useState } from "react";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -16,7 +16,11 @@ import {
 import type { Folder, Library, StudyDocument, Workspace } from "@/lib/library";
 import { cn } from "@/lib/utils";
 
-export type Removal = { kind: "workspace" | "folder" | "document"; id: string; title: string };
+export type Removal = {
+  kind: "workspace" | "folder" | "document" | "drawing";
+  id: string;
+  title: string;
+};
 const PDF_DRAG = "application/x-locus-document";
 export function StudyTree({
   library,
@@ -25,6 +29,8 @@ export function StudyTree({
   disabled,
   onSelect,
   onAddPdf,
+  onAddDrawing,
+  onSelectDrawing,
   onAddFolder,
   onRemove,
   onRename,
@@ -36,6 +42,8 @@ export function StudyTree({
   disabled: boolean;
   onSelect: (item: StudyDocument) => void;
   onAddPdf: (folderId: string | null) => void;
+  onAddDrawing: () => void;
+  onSelectDrawing: (id: string) => void;
   onAddFolder: () => void;
   onRemove: (item: Removal) => void;
   onRename: (item: Removal) => void;
@@ -95,7 +103,7 @@ export function StudyTree({
         )}
         onDragStart={(e) => {
           e.dataTransfer.setData(PDF_DRAG, document.id);
-          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.effectAllowed = "copyMove";
           setDragging(document.id);
         }}
         onDragEnd={() => {
@@ -224,19 +232,73 @@ export function StudyTree({
           .map((d) => (
             <div key={d.id}>{documentRow(d)}</div>
           ))}
+        {library.drawings
+          .filter((d) => d.workspaceId === workspace.id)
+          .map((drawing) => (
+            <div key={drawing.id}>
+              {menu(
+                <NavigationAction
+                  draggable={!disabled}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/x-locus-drawing", drawing.id);
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  onClick={() => onSelectDrawing(drawing.id)}
+                  className={cn(
+                    "min-w-0 cursor-grab gap-2 px-2",
+                    selectedId === drawing.id && "bg-sidebar-accent",
+                  )}
+                >
+                  <PenLineIcon />
+                  <span className="truncate">{drawing.title}</span>
+                </NavigationAction>,
+                <>
+                  <ContextMenuItem onClick={() => onSelectDrawing(drawing.id)}>
+                    Open whiteboard
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={onAddDrawing} disabled={disabled}>
+                    New whiteboard
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      onRename({ kind: "drawing", id: drawing.id, title: drawing.title })
+                    }
+                    disabled={disabled}
+                  >
+                    Rename
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    variant="destructive"
+                    onClick={() =>
+                      onRemove({ kind: "drawing", id: drawing.id, title: drawing.title })
+                    }
+                    disabled={disabled}
+                  >
+                    Remove from workspace
+                  </ContextMenuItem>
+                </>,
+              )}
+            </div>
+          ))}
         {dragging ? (
-          <div className="mt-3 border border-dashed p-3 text-center text-xs text-muted-foreground">
+          <div className="mt-3 border border-solid p-3 text-center text-xs text-muted-foreground">
             Drop here to move to workspace root
           </div>
-        ) : documents.length === 0 && folders.length === 0 ? (
+        ) : documents.length === 0 &&
+          folders.length === 0 &&
+          !library.drawings.some((d) => d.workspaceId === workspace.id) ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">
-            Right-click to add a PDF or folder.
+            Right-click to add a PDF, whiteboard, or folder.
           </p>
         ) : null}
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem disabled={disabled} onClick={() => onAddPdf(null)}>
           Add PDF
+        </ContextMenuItem>
+        <ContextMenuItem disabled={disabled} onClick={onAddDrawing}>
+          New whiteboard
         </ContextMenuItem>
         <ContextMenuItem disabled={disabled} onClick={onAddFolder}>
           Create folder

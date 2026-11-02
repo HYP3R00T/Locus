@@ -60,6 +60,17 @@ may reset. Restart the command after changing dependencies or development toolin
 `mise run dev` is a layout-only browser preview. It has no Rust backend and cannot manage your library or open
 local PDFs. Use desktop development for file/folder operations. See [Storage](storage.md) for persistence and removal behavior.
 
+### Linux rendering
+
+Locus disables WebKitGTK's DMA-BUF buffer path at startup to avoid confirmed scroll-position-dependent blur
+in settings and PDFs. Accelerated compositing stays enabled; other platforms are unchanged.
+The workaround also applies to packaged desktop builds. It may cost performance on otherwise unaffected systems.
+
+Explicit environment values take precedence. To test the original DMA-BUF path, start with
+`WEBKIT_DISABLE_DMABUF_RENDERER=0 mise run desktop`.
+`WEBKIT_DISABLE_COMPOSITING_MODE=1` was used only to diagnose the issue; do not keep that variable set
+for normal development, since it disables accelerated compositing entirely.
+
 ## Verification
 
 ```bash
@@ -121,7 +132,7 @@ The frontend uses Next.js static export, following the [Tauri integration guide]
 Runtime Server Actions, request-time SSR, and dynamic Next.js API handlers are not part of this design.
 Local backend operations belong in Rust and are called through Tauri's bridge.
 
-Only reading the application version is currently permitted. Add native permissions deliberately when a feature needs them.
+Native permissions cover application version, custom window controls, and close-event handling so whiteboards save before normal exit. Add permissions deliberately when a feature needs them.
 Production CSP restricts scripts and connections to the application; development CSP additionally allows Next.js
 live reload. Tauri injects hashes for bundled inline scripts. External fonts and CDN scripts are not required.
 
@@ -164,16 +175,36 @@ workspace root; the **Move to** context submenu is a keyboard-accessible alterna
 The reader scrolls continuously through all pages. Type a physical page number and press Enter to jump;
 the field also tracks scrolling. The zoom dropdown offers fixed percentages, fit to width, and fit to height.
 Fit modes follow viewport changes; zoom buttons switch to a fixed scale. Selectable text and encrypted-PDF passwords are supported.
+The title-bar command center contains **Split Vertically**, **Split Horizontally**, **Open Material**, and **Close Active Pane**. The study area allows two columns,
+each with up to two rows, for a maximum of four panes. Drag the dividers or focus them and use the arrow keys to resize.
+Click a pane to target sidebar selections. Drag a PDF or whiteboard from the tree onto a pane edge to split,
+or drag a pane cell from the title-bar map onto another pane to swap views. Wider dividers keep resize targets outside content scroll areas.
+Splitting always creates an empty pane. Choose a material there or from the sidebar; opening the same PDF
+in multiple panes still gives each view independent scrolling and zoom. A whiteboard has one live editor to avoid competing saves;
+opening an already visible whiteboard focuses its existing pane.
+Closing a pane leaves its PDFs attached. Layouts and individual pane positions last for the current workspace session;
+switching workspaces or restarting resets the layout. Only the active pane updates the document's saved resume location.
 Removal dialogs explain which references will disappear; original PDF files are never deleted.
 
 `components/layout` owns the shell, `components/workspace` owns library interactions and PDF rendering,
 `lib/library.ts` is the native-command/browser-preview boundary, and Rust owns persistent data.
-The small `scripts/prepare-pdfjs.mjs` inside the frontend package publishes PDF.js workers, fonts, character maps,
+The small `scripts/prepare-assets.mjs` inside the frontend package publishes PDF.js workers, fonts, character maps,
 and decoding WASM to versioned local assets. Preparation runs before development/build, skips a completed
-version, and retries incomplete copies. These runtime files are needed for offline PDFs; no CDN or extra service
+version, and retries incomplete copies. It also copies Excalidraw fonts for local use. These runtime files are needed offline; no CDN or extra service
 is required. Generated assets remain ignored by Git.
-The sidebar surface colors, square corners, spacing, and tree connectors follow Console.
-Drawing, pins, typed-note editing, top-bar resizing, and multiple content panes remain planned.
+The sidebar colors, spacing, and tree connectors follow Console. Container frames use small rounded corners and solid borders.
+Right-click the study tree or use **New Whiteboard** in the command palette to create an Excalidraw whiteboard. Whiteboards autosave as standard
+`.excalidraw` files and reopen from the tree. Normal window closing waits for saves; failed saves keep the window open.
+The title bar also offers a pane map, split controls, and the command palette (Ctrl+Shift+P, or Command+Shift+P on macOS).
+Preferences has separate Appearance, Key Bindings, and Canvas pages. Key Bindings offers shortcut recording,
+conflict checks, and per-command reset. Ctrl+W (Command+W on macOS) closes the active pane; the last one becomes empty.
+PDF scrollbars reserve their own lane; fit-to-width suppresses transient horizontal scrollbars during resizing.
+Excalidraw Library is hidden. Alt+P toggles the full canvas interface, including tools, properties, and footer controls. See [Workbench](workbench.md) for command scopes and preferences.
+PDF pins, typed-note editing, and top-bar resizing remain planned.
+
+Excalidraw loads only on the client, following its Next.js integration. The root npm overrides update its
+Lodash and Nano ID dependencies to patched versions. The current runtime audit still reports four inherited
+low-severity entries from Mermaid/KaTeX; it reports no moderate, high, or critical runtime advisories.
 
 ## Repository tools and documentation
 

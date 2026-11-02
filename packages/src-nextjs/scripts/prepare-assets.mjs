@@ -21,3 +21,17 @@ try {
 
   await writeFile(new URL(".ready", target), version);
 }
+
+// Excalidraw must also work offline; its font URLs use this local asset root.
+const excalidraw = path.dirname(require.resolve("@excalidraw/excalidraw"));
+const metadata = JSON.parse(await readFile(path.resolve(excalidraw, "../../package.json"), "utf8"));
+const drawingTarget = new URL("../public/excalidraw/", import.meta.url);
+let ready;
+try {
+  ready = await readFile(new URL(".ready", drawingTarget), "utf8");
+} catch {}
+if (ready !== metadata.version) {
+  await mkdir(drawingTarget, { recursive: true });
+  await cp(path.join(excalidraw, "fonts"), new URL("fonts", drawingTarget), { recursive: true });
+  await writeFile(new URL(".ready", drawingTarget), metadata.version);
+}

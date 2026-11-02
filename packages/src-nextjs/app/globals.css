@@ -126,7 +126,7 @@
 
 @layer base {
   * {
-    @apply border-border border-dashed outline-ring/50;
+    @apply border-border border-solid outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
@@ -152,7 +152,7 @@
   content: "";
   pointer-events: none;
   border-color: var(--border);
-  border-style: dashed;
+  border-style: solid;
 }
 
 .tree-branch::before {
@@ -172,4 +172,115 @@
   left: 0;
   width: 12px;
   border-top-width: 1px;
+}
+
+/* Small frames separate the navigation and study surfaces without inset content padding. */
+.locus-navigation-frame,
+.locus-study-pane {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.locus-study-pane {
+  background: var(--background);
+}
+
+/* PDF.js sizes pages as content boxes. Preflight's border-box shrinks the
+   canvas wrapper by the page border and resamples the entire rendered bitmap. */
+.locus-pdf-viewer .page {
+  box-sizing: content-box;
+}
+
+/* Reserve a PDF scrollbar lane instead of showing an overlay beside resize targets. */
+.locus-pdf-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  overscroll-behavior: contain;
+}
+.locus-pdf-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.locus-pdf-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 5px;
+}
+
+/* One switch hides Excalidraw's complete UI layer without hiding the drawing canvas. */
+.locus-whiteboard[data-controls-visible="false"] .layer-ui__wrapper,
+.locus-whiteboard .locus-disabled-library {
+  display: none;
+}
+
+.locus-pdf-scroll[data-fit-width="true"] {
+  overflow-x: hidden;
+}
+
+/* Navigation columns share a single outline, with their resize boundary inside it. */
+.locus-navigation-primary {
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+}
+.locus-navigation-context {
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+}
+.locus-study-pane:focus {
+  outline: none;
+}
+
+/* The complete gutter highlights; three dots mark its drag target at rest. */
+.locus-resize-gutter {
+  --gutter-dot: var(--muted-foreground);
+  position: relative;
+  flex-shrink: 0;
+  width: 6px;
+  border-radius: 3px;
+  background: transparent;
+  cursor: col-resize;
+}
+.locus-resize-gutter::after {
+  content: none;
+}
+.locus-resize-gutter::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--gutter-dot);
+  box-shadow:
+    0 -4px 0 var(--gutter-dot),
+    0 4px 0 var(--gutter-dot);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.locus-resize-gutter:hover,
+.locus-resize-gutter:active,
+.locus-resize-gutter:focus-visible {
+  --gutter-dot: var(--background);
+  background: var(--ring);
+}
+.locus-navigation-inner-gutter {
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+}
+.locus-resize-gutter[aria-orientation="horizontal"] {
+  width: 100%;
+  height: 6px;
+  cursor: row-resize;
+}
+.locus-resize-gutter[aria-orientation="horizontal"]::before {
+  box-shadow:
+    -4px 0 0 var(--gutter-dot),
+    4px 0 0 var(--gutter-dot);
+}
+.locus-resize-gutter[aria-hidden="true"]::before {
+  content: none;
 }
