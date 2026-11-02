@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs::File,
     io::{Read, Seek, SeekFrom},
-    path::Path,
+    path::{Path, PathBuf},
     sync::Mutex,
 };
 use uuid::Uuid;
@@ -26,6 +26,7 @@ fn title(value: &str) -> Result<&str> {
 
 pub struct Library {
     db: Mutex<Connection>,
+    drawings_root: PathBuf,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,6 +59,14 @@ pub struct Snapshot {
     workspaces: Vec<Workspace>,
     folders: Vec<Folder>,
     documents: Vec<Document>,
+    drawings: Vec<Drawing>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Drawing {
+    id: String,
+    workspace_id: String,
+    title: String,
 }
 #[derive(Deserialize)]
 #[serde(
@@ -67,6 +76,17 @@ pub struct Snapshot {
 )]
 pub enum Action {
     List,
+    CreateDrawing {
+        workspace_id: String,
+        title: String,
+    },
+    RenameDrawing {
+        drawing_id: String,
+        title: String,
+    },
+    RemoveDrawing {
+        drawing_id: String,
+    },
     CreateWorkspace {
         title: String,
     },
@@ -130,7 +150,7 @@ impl Library {
                     .map_err(err)?;
                 tx.commit().map_err(err)?;
             }
-            1 | 2 => {}
+            1..=3 => {}
             _ => return Err("This library was created by a newer Locus version.".into()),
         }
         if version < 2 {
@@ -139,13 +159,39 @@ impl Library {
                 .map_err(err)?;
             tx.commit().map_err(err)?;
         }
-        Ok(Self { db: Mutex::new(db) })
+        if version < 3 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/003_drawings.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        Ok(Self {
+            db: Mutex::new(db),
+            drawings_root: path
+                .parent()
+                .ok_or("Library has no parent directory.")?
+                .join("drawings"),
+        })
     }
     pub fn apply(&self, action: Action) -> Result<Snapshot> {
         let mut db = self.db.lock().map_err(err)?;
         let tx = db.transaction().map_err(err)?;
         match action {
             Action::List => {}
+            Action::CreateDrawing { workspace_id, title: value } => {
+                let drawing_id = id();
+                tx.execute("INSERT INTO drawings VALUES(?1,?2,?3)", params![drawing_id, workspace_id, title(&value)?]).map_err(err)?;
+                let directory = self.drawings_root.join(&workspace_id);
+                std::fs::create_dir_all(&directory).map_err(err)?;
+                std::fs::write(directory.join(format!("{drawing_id}.excalidraw")), r#"{"type":"excalidraw","version":2,"source":"locus","elements":[],"appState":{},"files":{}}"#).map_err(err)?;
+            }
+            Action::RenameDrawing { drawing_id, title: value } => {
+                tx.execute("UPDATE drawings SET title=?1 WHERE id=?2", params![title(&value)?, drawing_id]).map_err(err)?;
+            }
+            Action::RemoveDrawing { drawing_id } => {
+                // Removing a reference never deletes user-authored drawing files.
+                tx.execute("DELETE FROM drawings WHERE id=?1", [drawing_id]).map_err(err)?;
+            }
             Action::CreateWorkspace { title: value } => {
                 tx.execute(
                     "INSERT INTO workspaces VALUES(?1,?2)",
@@ -306,6 +352,54 @@ impl Library {
             length: self.file(document_id)?.metadata().map_err(err)?.len(),
         })
     }
+    fn drawing_path(&self, db: &Connection, drawing_id: &str) -> Result<PathBuf> {
+        Uuid::parse_str(drawing_id).map_err(err)?;
+        let workspace_id: String = db
+            .query_row(
+                "SELECT workspace_id FROM drawings WHERE id=?1",
+                [drawing_id],
+                |r| r.get(0),
+            )
+            .map_err(err)?;
+        Uuid::parse_str(&workspace_id).map_err(err)?;
+        Ok(self
+            .drawings_root
+            .join(workspace_id)
+            .join(format!("{drawing_id}.excalidraw")))
+    }
+    pub fn read_drawing(&self, drawing_id: &str) -> Result<String> {
+        let db = self.db.lock().map_err(err)?;
+        let path = self.drawing_path(&db, drawing_id)?;
+        if path.metadata().map_err(err)?.len() > 64 * 1024 * 1024 {
+            return Err("This whiteboard exceeds 64 MiB.".into());
+        }
+        std::fs::read_to_string(path).map_err(err)
+    }
+    pub fn save_drawing(&self, drawing_id: &str, scene: &str) -> Result<()> {
+        if scene.len() > 64 * 1024 * 1024 {
+            return Err("This whiteboard exceeds 64 MiB.".into());
+        }
+        let value: serde_json::Value = serde_json::from_str(scene).map_err(err)?;
+        if value.get("type").and_then(|v| v.as_str()) != Some("excalidraw")
+            || !value.get("elements").is_some_and(|v| v.is_array())
+        {
+            return Err("Invalid Excalidraw scene.".into());
+        }
+        let db = self.db.lock().map_err(err)?;
+        let path = self.drawing_path(&db, drawing_id)?;
+        let temporary = path.with_extension(format!("{}.tmp", id()));
+        let result = (|| {
+            use std::io::Write;
+            let mut file = File::create_new(&temporary).map_err(err)?;
+            file.write_all(scene.as_bytes()).map_err(err)?;
+            file.sync_all().map_err(err)?;
+            std::fs::rename(&temporary, &path).map_err(err)
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(temporary);
+        }
+        result
+    }
     pub fn read_range(&self, document_id: &str, begin: u64, end: u64) -> Result<Vec<u8>> {
         if end <= begin || end - begin > 1024 * 1024 {
             return Err("Invalid PDF byte range.".into());
@@ -381,6 +475,19 @@ fn snapshot(db: &Connection) -> Result<Snapshot> {
         workspaces,
         folders,
         documents,
+        drawings: db
+            .prepare("SELECT id,workspace_id,title FROM drawings ORDER BY title COLLATE NOCASE,id")
+            .map_err(err)?
+            .query_map([], |r| {
+                Ok(Drawing {
+                    id: r.get(0)?,
+                    workspace_id: r.get(1)?,
+                    title: r.get(2)?,
+                })
+            })
+            .map_err(err)?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(err)?,
     })
 }
 
@@ -667,5 +774,67 @@ mod tests {
             .execute_batch("PRAGMA user_version=99")
             .unwrap();
         assert!(Library::open(&f.0.join("test.sqlite")).is_err());
+    }
+    #[test]
+    fn drawings_are_portable_atomic_and_keep_files_when_references_are_removed() {
+        let f = Fixture::new();
+        let store = f.store();
+        let workspace = store
+            .apply(Action::CreateWorkspace {
+                title: "Physics".into(),
+            })
+            .unwrap()
+            .workspaces
+            .remove(0)
+            .id;
+        let data = store
+            .apply(Action::CreateDrawing {
+                workspace_id: workspace.clone(),
+                title: "Exercise 1".into(),
+            })
+            .unwrap();
+        let drawing = &data.drawings[0];
+        let drawing_id = drawing.id.clone();
+        let original = store.read_drawing(&drawing_id).unwrap();
+        let scene = r#"{"type":"excalidraw","version":2,"elements":[{"id":"stroke"}],"appState":{},"files":{}}"#;
+        store.save_drawing(&drawing_id, scene).unwrap();
+        assert!(store.save_drawing(&drawing_id, "broken JSON").is_err());
+        assert!(
+            store
+                .save_drawing(&drawing_id, r#"{"type":"other","elements":[]}"#)
+                .is_err()
+        );
+        assert!(store.read_drawing("../../anything").is_err());
+        assert_ne!(original, scene);
+        drop(store);
+        let store = f.store();
+        assert_eq!(store.read_drawing(&drawing_id).unwrap(), scene);
+        let data = store
+            .apply(Action::RenameDrawing {
+                drawing_id: drawing_id.clone(),
+                title: "Solution".into(),
+            })
+            .unwrap();
+        assert_eq!(data.drawings[0].title, "Solution");
+        let path =
+            f.0.join("drawings")
+                .join(&workspace)
+                .join(format!("{drawing_id}.excalidraw"));
+        assert!(path.exists());
+        store
+            .apply(Action::RemoveDrawing {
+                drawing_id: drawing_id.clone(),
+            })
+            .unwrap();
+        assert!(store.read_drawing(&drawing_id).is_err());
+        assert_eq!(std::fs::read_to_string(path).unwrap(), scene);
+        assert!(
+            store
+                .apply(Action::CreateDrawing {
+                    workspace_id: "missing".into(),
+                    title: "No workspace".into()
+                })
+                .is_err()
+        );
     }
 }

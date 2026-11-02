@@ -12,10 +12,19 @@ export type StudyDocument = {
   y: number;
   positionVersion: number;
 };
-export type Library = { workspaces: Workspace[]; folders: Folder[]; documents: StudyDocument[] };
-export const emptyLibrary: Library = { workspaces: [], folders: [], documents: [] };
+export type Drawing = { id: string; workspaceId: string; title: string };
+export type Library = {
+  workspaces: Workspace[];
+  folders: Folder[];
+  documents: StudyDocument[];
+  drawings: Drawing[];
+};
+export const emptyLibrary: Library = { workspaces: [], folders: [], documents: [], drawings: [] };
 export type LibraryAction =
   | { type: "list" }
+  | { type: "createDrawing"; workspaceId: string; title: string }
+  | { type: "renameDrawing"; drawingId: string; title: string }
+  | { type: "removeDrawing"; drawingId: string }
   | { type: "createWorkspace"; title: string }
   | { type: "removeWorkspace"; workspaceId: string }
   | { type: "createFolder"; workspaceId: string; title: string }

@@ -5,7 +5,7 @@ icon: lucide/database
 # Storage
 
 **Implemented:** workspace/folder creation, referenced PDFs, per-workspace reading positions, removal,
-and missing-file relinking. Drawing files, pins, Markdown roots, relocation, and agents remain planned.
+missing-file relinking, and persistent Excalidraw whiteboards. PDF pins, Markdown roots, relocation, and agents remain planned.
 
 ## Ownership
 
@@ -18,12 +18,12 @@ in-memory replacement backend or browser upload workflow. All real library and f
 
 The database enables foreign keys, uses WAL, and applies numbered migrations transactionally. A newer schema
 version is refused rather than overwritten. Backups must include both the metadata database and separately
-stored PDFs; references alone do not preserve books. Back up the database while Locus is closed, or use SQLite's
+stored PDFs and managed drawings; references alone do not preserve content. Back up the database while Locus is closed, or use SQLite's
 backup facilities; copying an active WAL database file alone is insufficient.
 
 ## Current schema
 
-The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 and 2).
+The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 3).
 
 | Table                 | Responsibility                                                                                                              |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -31,6 +31,7 @@ The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 and 2).
 | `folders`             | UUID, workspace, and display title; no nested parent                                                                        |
 | `documents`           | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
 | `workspace_documents` | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
+| `drawings`            | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                         |
 | `reading_positions`   | Zero-based physical page index, page-relative vertical fraction, and offset format version for each workspace/document pair |
 
 Titles and file paths are not identities. Attaching the same canonical path reuses its document record;
@@ -75,9 +76,25 @@ SHA-256 fingerprint before updating the path; a different edition must be attach
 Ordinary reads check file size and modification time, not a fresh full hash for each range. Deliberate edits
 that preserve both attributes are not detected. Changing the path or storage medium while reading may interrupt rendering.
 
+## Whiteboards
+
+Drawing metadata lives in SQLite's `drawings` table (`id`, `workspace_id`, `title`). Standard Excalidraw JSON,
+including embedded image files, lives beside the database at `drawings/<workspace-id>/<drawing-id>.excalidraw`.
+Names are display metadata; renaming a whiteboard does not change its ID or path. Storage relocation and PDF pins are not implemented.
+
+Saves are debounced, ordered per drawing, and replace files via a temporary file and atomic rename.
+Pending edits survive pane remounts in memory. Normal window closing flushes pending edits and waits for saves;
+a failure keeps the window open. Crashes or forced termination can still lose the latest unsaved edits.
+Only registered drawing IDs can be read or saved; the backend validates the scene type and enforces a 64 MiB limit.
+
+Removing a whiteboard or workspace removes its database references while retaining `.excalidraw` files on disk.
+Those files can be opened externally; automatic orphan recovery and external-file change watching are not implemented.
+Back up both `library.sqlite` and the drawing directory. Opening a whiteboard again reads the file unless an unsaved local edit needs recovery.
+
 ## Verification
 
 Rust tests cover reopening the database, stable IDs and reading positions, range bounds, unregistered IDs,
 missing/changed files, relinking, invalid headers, cross-workspace folder rejection, and non-destructive removal.
-Frontend checks cover lint/types/build. Manually exercise the native picker and rendering with representative
+Drawing tests cover persistence, rename, validation, and preserving files after reference removal.
+Frontend checks cover lint/types and pane limits, mixed-content swaps, and drag-to-split transitions. Manually exercise the native picker and rendering with representative
 books on each target OS; a browser preview does not prove the platform's WebView or native dialog behavior.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { ThemeProvider } from "@/components/theme-provider";
+import { WorkbenchProvider } from "@/components/workbench/workbench-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <WindowFrame>{children}</WindowFrame>
+          <WorkbenchProvider>
+            <WindowFrame>{children}</WindowFrame>
+          </WorkbenchProvider>
         </ThemeProvider>
       </body>
     </html>

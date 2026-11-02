@@ -11,6 +11,7 @@ nav = [
   { Home = "index.md" },
   { "Getting started" = "getting-started.md" },
   { Storage = "storage.md" },
+  { Workbench = "workbench.md" },
   { "Project direction" = "project-direction.md" },
 ]
 

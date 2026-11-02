@@ -8,6 +8,26 @@ use tauri_plugin_dialog::DialogExt;
 type Store = Arc<Library>;
 
 #[tauri::command]
+async fn read_drawing(store: State<'_, Store>, drawing_id: String) -> Result<String, String> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.read_drawing(&drawing_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn save_drawing(
+    store: State<'_, Store>,
+    drawing_id: String,
+    scene: String,
+) -> Result<(), String> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || store.save_drawing(&drawing_id, &scene))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn library_action(store: State<'_, Store>, action: Action) -> Result<Snapshot, String> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || store.apply(action))
@@ -84,7 +104,9 @@ pub fn run() {
             library_action,
             attach_pdf,
             pdf_info,
-            read_pdf_range
+            read_pdf_range,
+            read_drawing,
+            save_drawing
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Locus");

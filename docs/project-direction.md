@@ -15,7 +15,7 @@ PDF.js provides continuous vertical reading with nearby-page rendering, selectab
 zoom, and password entry. Context menus support display-name changes and removal; PDFs can move between
 logical folders and the workspace root by dragging or using the menu.
 SQLite stores references and reading state; original PDFs remain outside application storage.
-Excalidraw, pins, Markdown editing, and AI are not implemented.
+Excalidraw whiteboards save locally and share the resizable pane layout with PDFs. PDF pins, Markdown editing, and AI are not implemented.
 
 ## First prototype
 

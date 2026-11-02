@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
 import type { PDFDocumentLoadingTask } from "pdfjs-dist";
 import type { PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { desktop, type StudyDocument } from "@/lib/library";
 
 type FitMode = "page-width" | "page-height";
@@ -20,11 +21,15 @@ const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
 export function PdfReader({
   document,
   onPosition,
+  onViewPosition,
   onLocate,
+  paneId,
 }: {
   document: StudyDocument;
   onPosition: (document: StudyDocument, pageIndex: number, y: number) => Promise<void>;
+  onViewPosition: (document: StudyDocument, pageIndex: number, y: number) => void;
   onLocate: () => void;
+  paneId: string;
 }) {
   const [pageIndex, setPageIndex] = useState(document.pageIndex);
   const [count, setCount] = useState(0);
@@ -36,6 +41,8 @@ export function PdfReader({
   const [positionError, setPositionError] = useState<string | null>(null);
   const [passwordNeeded, setPasswordNeeded] = useState(false);
   const [password, setPassword] = useState("");
+  const pageInput = useRef<HTMLInputElement>(null);
+  const pageField = useId();
   const scroll = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
   const viewer = useRef<PDFViewer | null>(null);
@@ -44,11 +51,13 @@ export function PdfReader({
   const interacted = useRef(false);
   const passwordCallback = useRef<((password: string) => void) | null>(null);
   const save = useRef(onPosition);
+  const remember = useRef(onViewPosition);
   const currentPosition = useRef({ pageIndex: document.pageIndex, y: document.y });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     save.current = onPosition;
-  }, [onPosition]);
+    remember.current = onViewPosition;
+  }, [onPosition, onViewPosition]);
   useEffect(() => {
     const source = initial.current;
     let cancelled = false;
@@ -189,6 +198,7 @@ export function PdfReader({
         );
         setPageIndex(index);
         currentPosition.current = { pageIndex: index, y };
+        remember.current(source, index, y);
         persist();
       });
       instance.setDocument(loaded);
@@ -265,12 +275,25 @@ export function PdfReader({
       instance.currentScale = scale;
     }
   }
+  useCommandHandlers(paneId, {
+    "pdf.page": {
+      enabled: !!count,
+      run: () => {
+        pageInput.current?.focus();
+        pageInput.current?.select();
+      },
+    },
+    "pdf.zoomIn": { enabled: !!count && zoom < 5, run: () => changeZoom(1) },
+    "pdf.zoomOut": { enabled: !!count && zoom > 0.25, run: () => changeZoom(-1) },
+    "pdf.fitWidth": { enabled: !!count, run: () => selectZoom("page-width") },
+    "pdf.fitHeight": { enabled: !!count, run: () => selectZoom("page-height") },
+  });
   const matchingPreset = ZOOM_PRESETS.find((scale) => Math.abs(scale - zoom) < 0.0001);
   const selectedZoom =
     zoomPreset ?? (matchingPreset === undefined ? "custom" : String(matchingPreset));
   return (
     <section aria-label={`PDF reader: ${document.title}`} className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b px-3 text-xs">
+      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b px-1 text-xs">
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {
@@ -278,11 +301,12 @@ export function PdfReader({
             goTo();
           }}
         >
-          <label htmlFor="pdf-page" className="sr-only">
+          <label htmlFor={pageField} className="sr-only">
             Page number
           </label>
           <input
-            id="pdf-page"
+            id={pageField}
+            ref={pageInput}
             name="page"
             type="text"
             inputMode="numeric"
@@ -399,7 +423,8 @@ export function PdfReader({
           ref={scroll}
           role="document"
           aria-label="PDF pages"
-          className="absolute inset-0 overflow-auto bg-muted/20"
+          data-fit-width={zoomPreset === "page-width"}
+          className="locus-pdf-scroll absolute inset-0 overflow-auto bg-muted/20"
           onWheel={() => {
             interacted.current = true;
           }}
