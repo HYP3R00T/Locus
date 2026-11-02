@@ -17,7 +17,10 @@ A maintainer may ask about any part of a contribution during review. A pull requ
 
 ## Before starting
 
-Read [Project direction](docs/project-direction.md) for the planned scope and current implementation status.
+Start with the [developer documentation](docs/index.md) for setup and architecture.
+The standalone public site is in [`website/`](website/README.md).
+
+Read [Progress & plans](https://locus.hyperoot.dev/roadmap/) for the planned scope and current implementation status.
 
 Search the existing issues before beginning work.
 
@@ -47,7 +50,7 @@ or replace maintainer approval; you remain responsible for the contribution unde
 
 ## Set up the project
 
-Follow [Getting started](docs/getting-started.md) to install Mise, configure the project tools, and set up Git hooks.
+Follow [build and release guide](docs/releasing.md) to install Mise, configure the project tools, and set up Git hooks.
 Fork the repository unless you have write access, then verify the environment:
 
 ```bash
@@ -74,6 +77,7 @@ For a permitted small correction without an issue, use a concise conventional pr
 - Avoid unrelated formatting, refactoring, dependency, or generated-file changes.
 - Add or update tests when behavior changes and the project provides a test suite.
 - Update documentation when setup, behavior, interfaces, or contributor workflows change.
+- Record completed user-visible changes under Unreleased in `CHANGELOG.md`; keep future plans on the website.
 - Never include credentials, tokens, private data, or unrelated machine-generated files.
 
 Comments and documentation should explain intent, constraints, or non-obvious decisions. Do not restate code that is already clear.

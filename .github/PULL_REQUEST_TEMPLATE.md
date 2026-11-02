@@ -32,6 +32,11 @@ prek run --all-files
 
 <!-- Identify compatibility, migration, privacy, security, concurrency, resource, or operational risks. Point reviewers to the most consequential changes. Write "None" only after considering them. -->
 
+## User-facing changes
+
+<!-- Add completed user-visible changes to CHANGELOG.md under Unreleased.
+Keep plans on the website's Progress page. Do not bump the application version in ordinary feature PRs. -->
+
 ## Documentation impact
 
 <!-- Link or describe documentation changes. If none are needed, explain why. -->

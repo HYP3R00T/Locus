@@ -1,7 +1,3 @@
----
-icon: lucide/compass
----
-
 # Project direction
 
 ## Purpose
@@ -9,7 +5,7 @@ icon: lucide/compass
 Locus is a personal workspace for studying books and papers, taking handwritten or typed notes,
 and connecting ideas across materials. It should support independent study first, with optional agent assistance later.
 
-**Status: PDF library and reader.** The desktop app creates workspaces and one-level logical folders,
+**Current implementation: PDF and whiteboard workspace.** The desktop app creates workspaces and one-level logical folders,
 attaches existing PDFs without copying them, and restores per-workspace reading positions.
 PDF.js provides continuous vertical reading with nearby-page rendering, selectable text, Enter-to-jump page entry,
 zoom, and password entry. Context menus support display-name changes and removal; PDFs can move between
@@ -17,16 +13,16 @@ logical folders and the workspace root by dragging or using the menu.
 SQLite stores references and reading state; original PDFs remain outside application storage.
 Excalidraw whiteboards save locally and share the resizable pane layout with PDFs. PDF pins, Markdown editing, and AI are not implemented.
 
-## First prototype
+## Planned linked-note workflow
 
 A PDF reader and an Excalidraw canvas sit side by side. Each pane scrolls independently.
 Readers create notes wherever they need them, without having to define chapters or sections first.
 A marker on the PDF opens the associated drawing.
 
-The prototype must preserve the reading position, linked drawings, and their content across application restarts.
+This planned workflow must preserve the reading position, linked drawings, and their content across application restarts.
 The first implementation may use page-level links before introducing more precise location anchors.
 
-### Acceptance test
+### Planned acceptance test
 
 1. Open a PDF and navigate to a page.
 2. Create a linked drawing and write or sketch on its canvas.
@@ -41,8 +37,9 @@ Drawing input must also be checked with the intended tablet or mouse before trea
 A book or paper owns its reading state and associated notes. A study session represents a visit to that material;
 starting another session should not split or hide existing notes.
 
-Document identity must eventually survive file moves and renames. The storage format, file-management behavior,
-and precise anchoring scheme remain open implementation decisions.
+Registered documents have stable IDs and support explicit relinking after a file move. SQLite stores library
+metadata and whiteboard references; drawing content lives in standard Excalidraw files. Precise PDF anchors and
+the model for future study sessions remain design work.
 
 ## Architecture boundaries
 
@@ -61,8 +58,9 @@ with the Rust application directly in `packages/src-tauri/`. See [Getting starte
 ## Later capabilities
 
 - Typed notes alongside handwritten drawings.
-- Multiple documents and notes in a workspace, with panes that can be reordered, pinned, and swapped.
+- Pinning and richer connections across materials; splitting and swapping panes are already implemented.
 - Reference reading and connections across books, papers, and notes.
-- Optional agents for explanations, teaching, and practice using selected source material.
+- Optional assistance using explicitly selected source material. An AI tutor is not part of the current scope.
 
-Agents, cloud synchronization, and the broader pane system are outside the first prototype.
+Agents and cloud synchronization are outside the current implementation. The existing pane system already
+supports up to four independently resizable views.

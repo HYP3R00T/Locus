@@ -1,7 +1,3 @@
----
-icon: lucide/database
----
-
 # Storage
 
 **Implemented:** workspace/folder creation, referenced PDFs, per-workspace reading positions, removal,
@@ -31,7 +27,7 @@ The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 3)
 | `folders`             | UUID, workspace, and display title; no nested parent                                                                        |
 | `documents`           | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
 | `workspace_documents` | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
-| `drawings`            | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                         |
+| `drawings`            | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                     |
 | `reading_positions`   | Zero-based physical page index, page-relative vertical fraction, and offset format version for each workspace/document pair |
 
 Titles and file paths are not identities. Attaching the same canonical path reuses its document record;
@@ -59,7 +55,8 @@ PDF.js requests byte ranges through Rust, bounded to 1 MiB per native read. Its 
 all pages but renders/caches nearby pages instead of allocating a canvas for every page.
 The app disables eager full-file fetching, though a PDF's structure can still require substantial reads.
 Workers, fonts, character maps, and WASM assets ship locally. Rendering is read-only: PDF scripts are not executed
-and interactive annotations, internal-link navigation, search, and printing are not yet implemented.
+and internal/external links use the PDF.js annotation layer and link service. Editing annotations, search, and
+printing are not implemented. See [Workbench](workbench.md#pdf-links-and-wheel-zoom).
 Encrypted PDFs request a password in the reader; passwords are not persisted.
 
 Page/scroll changes save after a short debounce and flush when the reader unmounts. An abrupt process exit can
@@ -96,5 +93,6 @@ Back up both `library.sqlite` and the drawing directory. Opening a whiteboard ag
 Rust tests cover reopening the database, stable IDs and reading positions, range bounds, unregistered IDs,
 missing/changed files, relinking, invalid headers, cross-workspace folder rejection, and non-destructive removal.
 Drawing tests cover persistence, rename, validation, and preserving files after reference removal.
-Frontend checks cover lint/types and pane limits, mixed-content swaps, and drag-to-split transitions. Manually exercise the native picker and rendering with representative
+Frontend checks cover lint/types. Pane limits, mixed-content swaps, and drag-to-split behavior require focused
+behavior verification; no separate frontend behavior-test command is configured. Manually exercise the native picker and rendering with representative
 books on each target OS; a browser preview does not prove the platform's WebView or native dialog behavior.
