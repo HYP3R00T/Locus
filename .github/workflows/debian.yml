@@ -1,0 +1,58 @@
+name: Build Debian installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: debian-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debian:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+            libxdo-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: node rust
+      - run: npm ci
+      - run: |
+          npm exec -- biome check .
+          npm run typecheck --workspace @locus/nextjs
+      - working-directory: packages/src-tauri
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+      - name: Build local installer
+        run: mise run build
+      - name: Inspect package and create checksum
+        id: package
+        run: |
+          cd packages/src-tauri/target/release/bundle/deb
+          test "$(find . -maxdepth 1 -name '*.deb' | wc -l)" -eq 1
+          for package in ./*.deb; do
+            dpkg-deb --info "$package"
+            dpkg-deb --contents "$package" > /dev/null
+            sha256sum "$package" > SHA256SUMS
+          done
+          echo "revision=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: locus-debian-${{ steps.package.outputs.revision }}
+          path: |
+            packages/src-tauri/target/release/bundle/deb/*.deb
+            packages/src-tauri/target/release/bundle/deb/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

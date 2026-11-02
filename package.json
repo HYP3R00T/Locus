@@ -5,26 +5,12 @@
   "description": "A workspace for study and research.",
   "license": "MIT",
   "engines": {
-    "node": ">=24 <25",
-    "npm": ">=11 <12"
+    "node": ">=24",
+    "npm": ">=11"
   },
   "workspaces": [
     "packages/src-nextjs"
   ],
-  "scripts": {
-    "dev": "npm run dev --workspace @locus/nextjs --",
-    "build": "npm run build --workspace @locus/nextjs",
-    "lint": "biome check .",
-    "typecheck": "npm run typecheck --workspace @locus/nextjs",
-    "check": "npm run lint && npm run typecheck",
-    "tauri": "node packages/src-tauri/scripts/tauri.mjs",
-    "desktop:dev": "node packages/src-tauri/scripts/tauri.mjs dev",
-    "desktop:build": "node packages/src-tauri/scripts/tauri.mjs build -- --locked",
-    "desktop:check": "cargo fmt --manifest-path packages/src-tauri/Cargo.toml --all -- --check && cargo clippy --manifest-path packages/src-tauri/Cargo.toml --all-targets --locked -- -D warnings && cargo test --manifest-path packages/src-tauri/Cargo.toml --locked",
-    "ui": "npm run ui --workspace @locus/nextjs --",
-    "format": "biome format --write .",
-    "lint:fix": "biome check --write ."
-  },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@tauri-apps/cli": "2.12.4"
