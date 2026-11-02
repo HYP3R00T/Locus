@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WindowFrame } from "@/components/layout/window-frame";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <WindowFrame>{children}</WindowFrame>
+        </ThemeProvider>
       </body>
     </html>
   );

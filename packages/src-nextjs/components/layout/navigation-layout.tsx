@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
@@ -52,7 +52,6 @@ export function NavigationLayout({
   const contextGroup = useRef<HTMLDivElement | null>(null);
   const primaryWidth = useRef(PRIMARY_MIN);
   const contextWidth = useRef(256);
-  const [resizing, setResizing] = useState(false);
 
   useEffect(() => {
     if (mobile) return;
@@ -73,25 +72,14 @@ export function NavigationLayout({
     return () => cancelAnimationFrame(frame);
   }, [contextExpanded, mobile]);
 
-  useEffect(() => {
-    const stopResizing = () => setResizing(false);
-    window.addEventListener("pointerup", stopResizing);
-    window.addEventListener("pointercancel", stopResizing);
-    return () => {
-      window.removeEventListener("pointerup", stopResizing);
-      window.removeEventListener("pointercancel", stopResizing);
-    };
-  }, []);
-
   if (mobile) {
-    return <div className="flex h-svh w-full overflow-hidden bg-background">{children}</div>;
+    return <div className="flex h-full w-full overflow-hidden bg-background">{children}</div>;
   }
 
   return (
     <ResizablePanelGroup
       orientation="horizontal"
-      className="navigation-panels h-svh! min-w-0 bg-background"
-      data-resizing={resizing}
+      className="h-full! min-w-0 bg-background"
       elementRef={primaryGroup}
       onLayoutChanged={(layout, meta) => {
         if (primaryExpanded && meta.isUserInteraction && primaryGroup.current) {
@@ -125,7 +113,6 @@ export function NavigationLayout({
           "bg-border/40",
           !primaryExpanded && "pointer-events-none bg-transparent after:hidden",
         )}
-        onPointerDown={() => setResizing(true)}
       />
       <ResizablePanel
         id="workspace-region"
@@ -135,8 +122,7 @@ export function NavigationLayout({
         {/* Nesting preserves the context width while the primary column is dragged. */}
         <ResizablePanelGroup
           orientation="horizontal"
-          className="navigation-panels min-w-0"
-          data-resizing={resizing}
+          className="min-w-0"
           elementRef={contextGroup}
           onLayoutChanged={(layout, meta) => {
             if (contextExpanded && meta.isUserInteraction && contextGroup.current) {
@@ -169,7 +155,6 @@ export function NavigationLayout({
               "bg-border/40",
               !contextExpanded && "pointer-events-none bg-transparent after:hidden",
             )}
-            onPointerDown={() => setResizing(true)}
           />
           <ResizablePanel id="study-content-panel" minSize={CONTENT_MIN} className="h-full min-w-0">
             {children}

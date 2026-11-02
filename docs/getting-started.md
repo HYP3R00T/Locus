@@ -35,9 +35,9 @@ Node.js is pinned in `mise.toml`; the stable Rust channel follows `rust-toolchai
 
 ## Local development
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` / `mise run dev` | Frontend on an available loopback port |
+| Command                                    | Purpose                                                |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `npm run dev` / `mise run dev`             | Frontend on an available loopback port                 |
 | `npm run desktop:dev` / `mise run desktop` | Desktop window with the same frontend and Rust runtime |
 
 The browser server starts at port 3000 and automatically tries the next available port if it is occupied.
@@ -52,8 +52,13 @@ Frontend changes reload automatically; Rust changes rebuild the desktop runtime.
 The browser preview is useful for layout and frontend work. Native APIs are available only inside Tauri;
 the version footer detects the desktop runtime before requesting its version.
 
-The current screen is a foundation, not the PDF reader or drawing prototype. See
-[Project direction](project-direction.md) for the next product milestone.
+Keep `mise run desktop` running during active development. It manages both the Next.js development server
+and Rust application: frontend edits use Fast Refresh; Rust edits trigger an automatic rebuild and application
+restart. You do not rerun the command for each edit. Persisted library data survives restarts; unsaved UI state
+may reset. Restart the command after changing dependencies or development tooling, or if a watcher stops.
+
+`mise run dev` is a layout-only browser preview. It has no Rust backend and cannot manage your library or open
+local PDFs. Use desktop development for file/folder operations. See [Storage](storage.md) for persistence and removal behavior.
 
 ## Verification
 
@@ -64,17 +69,15 @@ npm run desktop:check
 prek run --all-files
 ```
 
-`npm run check` runs ESLint, TypeScript, and the development port regression test, generating Next.js route types before type checking.
+`npm run check` runs the pinned project-local Biome formatter/linter/import checks, TypeScript, and the
+development port regression test. Route types are generated before type checking.
+Use `npm run format` for formatting and `npm run lint:fix` for safe lint/import fixes.
+The pre-commit hook runs Biome on supported changed files; CI uses the same root check command.
 `npm run build` exports the frontend to `packages/src-nextjs/out/`.
 `npm run desktop:check` checks Rust formatting, runs Clippy with warnings as errors, and runs Rust tests.
 It requires the native development libraries above. `mise run check` runs both frontend and Rust checks.
 
 CI runs repository checks and Linux application checks. Other desktop platforms require their own verification.
-
-The current Next.js lint preset's plugins declare compatibility with ESLint 9, so the scaffold pins that version.
-It is deprecated upstream, and npm reports moderate advisories in the preset's development-only dependency tree.
-Do not use `npm audit fix --force` to downgrade Next.js or force incompatible lint dependencies; revisit this pin
-when the preset's plugins support the current ESLint major.
 
 ## Desktop builds
 
@@ -94,14 +97,14 @@ entry points for future release automation; they do not create a GitHub release.
 
 ## Structure and boundaries
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/src-nextjs/app/` | Next.js routes, root layout, and styles |
-| `packages/src-nextjs/components/` | Reusable React UI and client-side native integration |
-| `packages/src-nextjs/public/` | Static assets and the source application icon |
-| `packages/src-tauri/src/` | Rust application entry points |
+| Path                                 | Responsibility                                                     |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| `packages/src-nextjs/app/`           | Next.js routes, root layout, and styles                            |
+| `packages/src-nextjs/components/`    | Reusable React UI and client-side native integration               |
+| `packages/src-nextjs/public/`        | Static assets and the source application icon                      |
+| `packages/src-tauri/src/`            | Rust application entry points                                      |
 | `packages/src-tauri/tauri.conf.json` | Desktop identity, window, development URL, build commands, and CSP |
-| `packages/src-tauri/capabilities/` | Permissions granted to specific windows |
+| `packages/src-tauri/capabilities/`   | Permissions granted to specific windows                            |
 
 The root npm workspace owns the shared `package-lock.json`, Tauri CLI dependency, and orchestration commands.
 Next.js configuration and dependencies belong to `packages/src-nextjs/`. Rust dependencies are managed separately
@@ -149,16 +152,27 @@ and the study tree to 208–448 px. The content pane keeps at least 320 px; avai
 limit expansion. Collapsed columns stay at 56 px and cannot be dragged. Each column restores its last user-selected
 expanded width during the current session. Resizing the first column preserves the study tree's width when space allows.
 On narrow screens the navigation moves into a sheet.
+Desktop windows use a custom draggable title bar with minimize, maximize/restore, and close controls.
+The browser preview keeps ordinary browser controls. Sidebar toggles update layout immediately; PDF width fitting
+is deferred until width changes settle, avoiding repeated renders during resizing.
 Settings stays at the bottom of the application rail; Appearance offers System, Light, and Dark modes.
 
-The application rail shows a sample Physics subject. Its Classical mechanics study space groups materials into
-Books, Research papers, and Problem solving. Selecting a material or note changes the workspace placeholder
-and breadcrumb. The hierarchy is static sample data; it does not create files or study records.
-PDF rendering, drawing, typed-note editing, project creation, and persistence of study data remain planned.
-Top-bar resizing, drag-and-drop, and multiple content panes are also deferred.
+Create a workspace with the plus button in the application rail. Right-click the study tree to create a folder or add a PDF at the workspace root.
+Right-click a folder to add PDFs there. PDF, folder, and workspace context menus offer display-name changes
+and removal without inline action buttons. Drag PDFs into folders or onto empty tree space to move them to the
+workspace root; the **Move to** context submenu is a keyboard-accessible alternative.
+The reader scrolls continuously through all pages. Type a physical page number and press Enter to jump;
+the field also tracks scrolling. Zoom, selectable text, and encrypted-PDF passwords are supported.
+Removal dialogs explain which references will disappear; original PDF files are never deleted.
 
-`components/layout` owns the shell and navigation controls, `components/workspace` owns the sample hierarchy and
-content placeholder, and `components/settings` owns preferences. No shared UI package is needed until another app consumes these components.
+`components/layout` owns the shell, `components/workspace` owns library interactions and PDF rendering,
+`lib/library.ts` is the native-command/browser-preview boundary, and Rust owns persistent data.
+The small `scripts/prepare-pdfjs.mjs` inside the frontend package publishes PDF.js workers, fonts, character maps,
+and decoding WASM to versioned local assets. Preparation runs before development/build, skips a completed
+version, and retries incomplete copies. These runtime files are needed for offline PDFs; no CDN or extra service
+is required. Generated assets remain ignored by Git.
+The sidebar surface colors, square corners, spacing, and tree connectors follow Console.
+Drawing, pins, typed-note editing, top-bar resizing, and multiple content panes remain planned.
 
 ## Repository tools and documentation
 

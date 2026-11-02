@@ -1,0 +1,671 @@
+use rusqlite::{Connection, OptionalExtension, params};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::{
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+    path::Path,
+    sync::Mutex,
+};
+use uuid::Uuid;
+
+type Result<T> = std::result::Result<T, String>;
+fn err(e: impl std::fmt::Display) -> String {
+    e.to_string()
+}
+fn id() -> String {
+    Uuid::new_v4().to_string()
+}
+fn title(value: &str) -> Result<&str> {
+    let value = value.trim();
+    if value.is_empty() || value.chars().count() > 120 {
+        return Err("Use a title between 1 and 120 characters.".into());
+    }
+    Ok(value)
+}
+
+pub struct Library {
+    db: Mutex<Connection>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Workspace {
+    id: String,
+    title: String,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Folder {
+    id: String,
+    workspace_id: String,
+    title: String,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Document {
+    id: String,
+    workspace_id: String,
+    folder_id: Option<String>,
+    title: String,
+    path: String,
+    page_index: u32,
+    y: f64,
+    position_version: u32,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Snapshot {
+    workspaces: Vec<Workspace>,
+    folders: Vec<Folder>,
+    documents: Vec<Document>,
+}
+#[derive(Deserialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum Action {
+    List,
+    CreateWorkspace {
+        title: String,
+    },
+    RemoveWorkspace {
+        workspace_id: String,
+    },
+    CreateFolder {
+        workspace_id: String,
+        title: String,
+    },
+    RemoveFolder {
+        folder_id: String,
+    },
+    RemoveDocument {
+        workspace_id: String,
+        document_id: String,
+    },
+    RenameDocument {
+        workspace_id: String,
+        document_id: String,
+        title: String,
+    },
+    MoveDocument {
+        workspace_id: String,
+        document_id: String,
+        folder_id: Option<String>,
+    },
+    RenameFolder {
+        folder_id: String,
+        title: String,
+    },
+    RenameWorkspace {
+        workspace_id: String,
+        title: String,
+    },
+    SavePosition {
+        workspace_id: String,
+        document_id: String,
+        page_index: u32,
+        y: f64,
+    },
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfInfo {
+    pub length: u64,
+}
+
+impl Library {
+    pub fn open(path: &Path) -> Result<Self> {
+        let db = Connection::open(path).map_err(err)?;
+        db.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;")
+            .map_err(err)?;
+        let version: u32 = db
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .map_err(err)?;
+        match version {
+            0 => {
+                let tx = db.unchecked_transaction().map_err(err)?;
+                tx.execute_batch(include_str!("../migrations/001_library.sql"))
+                    .map_err(err)?;
+                tx.commit().map_err(err)?;
+            }
+            1 | 2 => {}
+            _ => return Err("This library was created by a newer Locus version.".into()),
+        }
+        if version < 2 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/002_navigation.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        Ok(Self { db: Mutex::new(db) })
+    }
+    pub fn apply(&self, action: Action) -> Result<Snapshot> {
+        let mut db = self.db.lock().map_err(err)?;
+        let tx = db.transaction().map_err(err)?;
+        match action {
+            Action::List => {}
+            Action::CreateWorkspace { title: value } => {
+                tx.execute(
+                    "INSERT INTO workspaces VALUES(?1,?2)",
+                    params![id(), title(&value)?],
+                )
+                .map_err(err)?;
+            }
+            Action::CreateFolder {
+                workspace_id,
+                title: value,
+            } => {
+                tx.execute(
+                    "INSERT INTO folders VALUES(?1,?2,?3)",
+                    params![id(), workspace_id, title(&value)?],
+                )
+                .map_err(err)?;
+            }
+            Action::RemoveWorkspace { workspace_id } => {
+                tx.execute(
+                    "DELETE FROM reading_positions WHERE workspace_id=?1",
+                    [&workspace_id],
+                )
+                .map_err(err)?;
+                tx.execute(
+                    "DELETE FROM workspace_documents WHERE workspace_id=?1",
+                    [&workspace_id],
+                )
+                .map_err(err)?;
+                tx.execute("DELETE FROM workspaces WHERE id=?1", [&workspace_id])
+                    .map_err(err)?;
+            }
+            Action::RemoveFolder { folder_id } => {
+                tx.execute(
+                    "UPDATE workspace_documents SET folder_id=NULL WHERE folder_id=?1",
+                    [&folder_id],
+                )
+                .map_err(err)?;
+                tx.execute("DELETE FROM folders WHERE id=?1", [&folder_id])
+                    .map_err(err)?;
+            }
+            Action::RemoveDocument {
+                workspace_id,
+                document_id,
+            } => {
+                tx.execute(
+                    "DELETE FROM workspace_documents WHERE workspace_id=?1 AND document_id=?2",
+                    params![workspace_id, document_id],
+                )
+                .map_err(err)?;
+            }
+            Action::RenameDocument {workspace_id,document_id,title:value} => {
+                if tx.execute("UPDATE workspace_documents SET title=?1 WHERE workspace_id=?2 AND document_id=?3",params![title(&value)?,workspace_id,document_id]).map_err(err)? != 1 { return Err("This PDF is no longer attached.".into()); }
+            }
+            Action::MoveDocument {workspace_id,document_id,folder_id} => {
+                if tx.execute("UPDATE workspace_documents SET folder_id=?1 WHERE workspace_id=?2 AND document_id=?3",params![folder_id,workspace_id,document_id]).map_err(err)? != 1 { return Err("This PDF is no longer attached.".into()); }
+            }
+            Action::RenameFolder {folder_id,title:value} => {tx.execute("UPDATE folders SET title=?1 WHERE id=?2",params![title(&value)?,folder_id]).map_err(err)?;}
+            Action::RenameWorkspace {workspace_id,title:value} => {tx.execute("UPDATE workspaces SET title=?1 WHERE id=?2",params![title(&value)?,workspace_id]).map_err(err)?;}
+            Action::SavePosition {
+                workspace_id,
+                document_id,
+                page_index,
+                y,
+            } => {
+                if !y.is_finite() || !(0.0..=1.0).contains(&y) {
+                    return Err("Invalid reading position.".into());
+                }
+                tx.execute("INSERT INTO reading_positions(workspace_id,document_id,page_index,y,position_version) VALUES(?1,?2,?3,?4,2) ON CONFLICT(workspace_id,document_id) DO UPDATE SET page_index=excluded.page_index,y=excluded.y,position_version=2", params![workspace_id,document_id,page_index,y]).map_err(err)?;
+            }
+        }
+        tx.execute("DELETE FROM documents WHERE NOT EXISTS(SELECT 1 FROM workspace_documents WHERE document_id=documents.id)", []).map_err(err)?;
+        tx.commit().map_err(err)?;
+        snapshot(&db)
+    }
+    pub fn attach(
+        &self,
+        workspace: &str,
+        folder: Option<&str>,
+        path: &Path,
+        relink: Option<&str>,
+    ) -> Result<Snapshot> {
+        let path = path.canonicalize().map_err(|_| {
+            "Cannot open this PDF. It may have moved or be unavailable.".to_string()
+        })?;
+        let (fingerprint, size, modified) = inspect_pdf(&path)?;
+        let path = path.to_str().ok_or("The file path is not valid UTF-8.")?;
+        let mut db = self.db.lock().map_err(err)?;
+        let tx = db.transaction().map_err(err)?;
+        if let Some(document_id) = relink {
+            let expected: String = tx.query_row("SELECT fingerprint FROM documents JOIN workspace_documents ON documents.id=document_id WHERE documents.id=?1 AND workspace_id=?2", params![document_id,workspace], |r|r.get(0)).map_err(err)?;
+            if fingerprint != expected {
+                return Err("This is a different PDF. Choose the original file, or attach this as a new document.".into());
+            }
+            tx.execute(
+                "UPDATE documents SET path=?1,file_size=?2,modified=?3 WHERE id=?4",
+                params![path, size, modified, document_id],
+            )
+            .map_err(err)?;
+        } else {
+            let existing: Option<(String, String)> = tx
+                .query_row(
+                    "SELECT id,fingerprint FROM documents WHERE path=?1",
+                    [path],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .optional()
+                .map_err(err)?;
+            let document_id = if let Some((document_id, old_hash)) = existing {
+                if old_hash != fingerprint {
+                    return Err("This file has changed. Remove its old references before attaching the replacement.".into());
+                }
+                tx.execute(
+                    "UPDATE documents SET file_size=?1,modified=?2 WHERE id=?3",
+                    params![size, modified, document_id],
+                )
+                .map_err(err)?;
+                document_id
+            } else {
+                let document_id = id();
+                let name = Path::new(path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Untitled PDF");
+                tx.execute(
+                    "INSERT INTO documents VALUES(?1,?2,?3,?4,?5,?6)",
+                    params![document_id, path, name, fingerprint, size, modified],
+                )
+                .map_err(err)?;
+                document_id
+            };
+            tx.execute("INSERT INTO workspace_documents(workspace_id,document_id,folder_id) VALUES(?1,?2,?3) ON CONFLICT(workspace_id,document_id) DO UPDATE SET folder_id=excluded.folder_id",params![workspace,document_id,folder]).map_err(err)?;
+        }
+        tx.commit().map_err(err)?;
+        snapshot(&db)
+    }
+    fn file(&self, document_id: &str) -> Result<File> {
+        let db = self.db.lock().map_err(err)?;
+        let (path, size, modified): (String, i64, String) = db
+            .query_row(
+                "SELECT path,file_size,modified FROM documents WHERE id=?1",
+                [document_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .map_err(|_| "This PDF is no longer attached.".to_string())?;
+        let file = File::open(path).map_err(|_| {
+            "PDF unavailable. Use Locate PDF to reconnect the original file.".to_string()
+        })?;
+        let metadata = file.metadata().map_err(err)?;
+        if metadata.len() != size as u64
+            || format!("{:?}", metadata.modified().map_err(err)?) != modified
+        {
+            return Err("PDF changed outside Locus. Use Locate PDF to verify its identity.".into());
+        }
+        Ok(file)
+    }
+    pub fn info(&self, document_id: &str) -> Result<PdfInfo> {
+        Ok(PdfInfo {
+            length: self.file(document_id)?.metadata().map_err(err)?.len(),
+        })
+    }
+    pub fn read_range(&self, document_id: &str, begin: u64, end: u64) -> Result<Vec<u8>> {
+        if end <= begin || end - begin > 1024 * 1024 {
+            return Err("Invalid PDF byte range.".into());
+        }
+        let mut file = self.file(document_id)?;
+        if end > file.metadata().map_err(err)?.len() {
+            return Err("PDF byte range exceeds the file.".into());
+        }
+        file.seek(SeekFrom::Start(begin)).map_err(err)?;
+        let mut bytes = vec![0; (end - begin) as usize];
+        file.read_exact(&mut bytes).map_err(err)?;
+        Ok(bytes)
+    }
+}
+fn inspect_pdf(path: &Path) -> Result<(String, i64, String)> {
+    let mut file = File::open(path).map_err(err)?;
+    let metadata = file.metadata().map_err(err)?;
+    if !metadata.is_file() {
+        return Err("Choose a PDF file.".into());
+    }
+    let mut header = [0; 1024];
+    let count = file.read(&mut header).map_err(err)?;
+    if !header[..count].windows(5).any(|s| s == b"%PDF-") {
+        return Err("This file does not contain a PDF header.".into());
+    }
+    file.seek(SeekFrom::Start(0)).map_err(err)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0; 65536];
+    loop {
+        let count = file.read(&mut buffer).map_err(err)?;
+        if count == 0 {
+            break;
+        }
+        hash.update(&buffer[..count]);
+    }
+    Ok((
+        hash.finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect(),
+        i64::try_from(metadata.len()).map_err(err)?,
+        format!("{:?}", metadata.modified().map_err(err)?),
+    ))
+}
+fn snapshot(db: &Connection) -> Result<Snapshot> {
+    let workspaces = db
+        .prepare("SELECT id,title FROM workspaces ORDER BY title COLLATE NOCASE,id")
+        .map_err(err)?
+        .query_map([], |r| {
+            Ok(Workspace {
+                id: r.get(0)?,
+                title: r.get(1)?,
+            })
+        })
+        .map_err(err)?
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(err)?;
+    let folders = db
+        .prepare("SELECT id,workspace_id,title FROM folders ORDER BY title COLLATE NOCASE,id")
+        .map_err(err)?
+        .query_map([], |r| {
+            Ok(Folder {
+                id: r.get(0)?,
+                workspace_id: r.get(1)?,
+                title: r.get(2)?,
+            })
+        })
+        .map_err(err)?
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(err)?;
+    let documents=db.prepare("SELECT d.id,w.workspace_id,w.folder_id,coalesce(w.title,d.title),d.path,coalesce(p.page_index,0),coalesce(p.y,0),coalesce(p.position_version,2) FROM workspace_documents w JOIN documents d ON d.id=w.document_id LEFT JOIN reading_positions p ON p.workspace_id=w.workspace_id AND p.document_id=d.id ORDER BY coalesce(w.title,d.title) COLLATE NOCASE,d.id").map_err(err)?.query_map([],|r|Ok(Document{id:r.get(0)?,workspace_id:r.get(1)?,folder_id:r.get(2)?,title:r.get(3)?,path:r.get(4)?,page_index:r.get(5)?,y:r.get(6)?,position_version:r.get(7)?})).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
+    Ok(Snapshot {
+        workspaces,
+        folders,
+        documents,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct Fixture(std::path::PathBuf);
+    impl Fixture {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!("locus-test-{}", id()));
+            std::fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+        fn pdf(&self, name: &str, content: &[u8]) -> std::path::PathBuf {
+            let path = self.0.join(name);
+            std::fs::write(&path, content).unwrap();
+            path
+        }
+        fn store(&self) -> Library {
+            Library::open(&self.0.join("test.sqlite")).unwrap()
+        }
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    fn workspace(store: &Library) -> String {
+        store
+            .apply(Action::CreateWorkspace {
+                title: "Physics".into(),
+            })
+            .unwrap()
+            .workspaces
+            .last()
+            .unwrap()
+            .id
+            .clone()
+    }
+    #[test]
+    fn references_positions_and_identity_survive_reopening() {
+        let fixture = Fixture::new();
+        let file = fixture.pdf("book.pdf", b"%PDF-1.7\nfixture");
+        let store = fixture.store();
+        let w = workspace(&store);
+        let a = store.attach(&w, None, &file, None).unwrap();
+        let document = a.documents[0].id.clone();
+        store
+            .apply(Action::SavePosition {
+                workspace_id: w.clone(),
+                document_id: document.clone(),
+                page_index: 41,
+                y: 0.7,
+            })
+            .unwrap();
+        drop(store);
+        let store = fixture.store();
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(data.documents[0].id, document);
+        assert_eq!(data.documents[0].page_index, 41);
+        assert_eq!(data.documents[0].y, 0.7);
+        assert_eq!(store.read_range(&document, 0, 5).unwrap(), b"%PDF-");
+        assert!(store.read_range(&document, 0, 1024 * 1024 + 1).is_err());
+        assert!(store.read_range(&document, 0, 999).is_err());
+        assert!(store.read_range("unregistered", 0, 5).is_err());
+        store
+            .apply(Action::RemoveDocument {
+                workspace_id: w,
+                document_id: document,
+            })
+            .unwrap();
+        assert!(file.exists());
+        assert!(store.apply(Action::List).unwrap().documents.is_empty());
+    }
+    #[test]
+    fn folder_removal_preserves_books_and_cross_workspace_folder_is_rejected() {
+        let f = Fixture::new();
+        let store = f.store();
+        let w = workspace(&store);
+        let folder = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                title: "Books".into(),
+            })
+            .unwrap()
+            .folders[0]
+            .id
+            .clone();
+        let pdf = f.pdf("book.pdf", b"%PDF-1.7\nfixture");
+        store.attach(&w, Some(&folder), &pdf, None).unwrap();
+        let other = workspace(&store);
+        // Identify the other workspace independently of the alphabetical/UUID order.
+        let other = store
+            .apply(Action::List)
+            .unwrap()
+            .workspaces
+            .into_iter()
+            .find(|v| v.id != w)
+            .map(|v| v.id)
+            .unwrap_or(other);
+        assert!(store.attach(&other, Some(&folder), &pdf, None).is_err());
+        let data = store
+            .apply(Action::RemoveFolder { folder_id: folder })
+            .unwrap();
+        assert!(data.documents[0].folder_id.is_none());
+        store.attach(&other, None, &pdf, None).unwrap();
+        store
+            .apply(Action::RemoveWorkspace { workspace_id: w })
+            .unwrap();
+        assert_eq!(store.apply(Action::List).unwrap().documents.len(), 1);
+        store
+            .apply(Action::RemoveWorkspace {
+                workspace_id: other,
+            })
+            .unwrap();
+        assert!(pdf.exists());
+    }
+    #[test]
+    fn missing_changed_and_relinked_files_are_explicit() {
+        let f = Fixture::new();
+        let store = f.store();
+        let w = workspace(&store);
+        let old = f.pdf("book.pdf", b"%PDF-1.7\noriginal");
+        let document = store.attach(&w, None, &old, None).unwrap().documents[0]
+            .id
+            .clone();
+        let moved = f.0.join("moved.pdf");
+        std::fs::rename(&old, &moved).unwrap();
+        assert!(store.info(&document).is_err());
+        let wrong = f.pdf("different.pdf", b"%PDF-1.7\nother");
+        assert!(store.attach(&w, None, &wrong, Some(&document)).is_err());
+        store.attach(&w, None, &moved, Some(&document)).unwrap();
+        assert!(store.info(&document).is_ok());
+        std::fs::write(&moved, b"%PDF-1.7\nreplacement that is longer").unwrap();
+        assert!(store.info(&document).is_err());
+        let invalid = f.pdf("invalid.pdf", b"not a PDF");
+        assert!(store.attach(&w, None, &invalid, None).is_err());
+    }
+    #[test]
+    fn display_names_and_folder_moves_do_not_change_files_or_other_workspaces() {
+        let f = Fixture::new();
+        let store = f.store();
+        let w = workspace(&store);
+        let file = f.pdf("original.pdf", b"%PDF-1.7\nfixture");
+        let doc = store.attach(&w, None, &file, None).unwrap().documents[0]
+            .id
+            .clone();
+        store
+            .apply(Action::CreateWorkspace {
+                title: "Math".into(),
+            })
+            .unwrap();
+        let other = store
+            .apply(Action::List)
+            .unwrap()
+            .workspaces
+            .into_iter()
+            .find(|v| v.id != w)
+            .unwrap()
+            .id;
+        store.attach(&other, None, &file, None).unwrap();
+        let folder = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                title: "Books".into(),
+            })
+            .unwrap()
+            .folders[0]
+            .id
+            .clone();
+        store
+            .apply(Action::SavePosition {
+                workspace_id: w.clone(),
+                document_id: doc.clone(),
+                page_index: 17,
+                y: 0.4,
+            })
+            .unwrap();
+        store
+            .apply(Action::RenameDocument {
+                workspace_id: w.clone(),
+                document_id: doc.clone(),
+                title: "My mechanics book".into(),
+            })
+            .unwrap();
+        let data = store
+            .apply(Action::MoveDocument {
+                workspace_id: w.clone(),
+                document_id: doc.clone(),
+                folder_id: Some(folder.clone()),
+            })
+            .unwrap();
+        let moved = data.documents.iter().find(|d| d.workspace_id == w).unwrap();
+        assert_eq!(moved.folder_id, Some(folder.clone()));
+        assert_eq!(moved.title, "My mechanics book");
+        assert_eq!(moved.page_index, 17);
+        assert_eq!(
+            data.documents
+                .iter()
+                .find(|d| d.workspace_id == other)
+                .unwrap()
+                .title,
+            "original"
+        );
+        assert!(
+            store
+                .apply(Action::MoveDocument {
+                    workspace_id: other,
+                    document_id: doc.clone(),
+                    folder_id: Some(folder)
+                })
+                .is_err()
+        );
+        let data = store
+            .apply(Action::MoveDocument {
+                workspace_id: w,
+                document_id: doc,
+                folder_id: None,
+            })
+            .unwrap();
+        assert!(data.documents.iter().all(|d| d.folder_id.is_none()));
+        assert_eq!(std::fs::read(file).unwrap(), b"%PDF-1.7\nfixture");
+    }
+    #[test]
+    fn v1_reading_positions_migrate_without_losing_page_or_legacy_offset() {
+        let f = Fixture::new();
+        let db = Connection::open(f.0.join("test.sqlite")).unwrap();
+        db.execute_batch(include_str!("../migrations/001_library.sql"))
+            .unwrap();
+        db.execute_batch("INSERT INTO workspaces VALUES('w','Physics'); INSERT INTO documents VALUES('d','/old/book.pdf','Book','hash',20,'time'); INSERT INTO workspace_documents VALUES('w','d',NULL); INSERT INTO reading_positions VALUES('w','d',11,0.65);").unwrap();
+        drop(db);
+        let store = f.store();
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(data.documents[0].page_index, 11);
+        assert_eq!(data.documents[0].y, 0.65);
+        assert_eq!(data.documents[0].position_version, 1);
+        let data = store
+            .apply(Action::SavePosition {
+                workspace_id: "w".into(),
+                document_id: "d".into(),
+                page_index: 12,
+                y: 0.25,
+            })
+            .unwrap();
+        assert_eq!(data.documents[0].position_version, 2);
+        drop(store);
+        assert_eq!(
+            f.store().apply(Action::List).unwrap().documents[0].page_index,
+            12
+        );
+    }
+    #[test]
+    fn invalid_state_and_future_schema_are_rejected() {
+        let f = Fixture::new();
+        let store = f.store();
+        assert!(
+            store
+                .apply(Action::CreateWorkspace { title: " ".into() })
+                .is_err()
+        );
+        assert!(
+            store
+                .apply(Action::SavePosition {
+                    workspace_id: "unknown".into(),
+                    document_id: "unknown".into(),
+                    page_index: 0,
+                    y: f64::NAN
+                })
+                .is_err()
+        );
+        assert!(
+            store
+                .apply(Action::SavePosition {
+                    workspace_id: "unknown".into(),
+                    document_id: "unknown".into(),
+                    page_index: 0,
+                    y: 0.0
+                })
+                .is_err()
+        );
+        drop(store);
+        Connection::open(f.0.join("test.sqlite"))
+            .unwrap()
+            .execute_batch("PRAGMA user_version=99")
+            .unwrap();
+        assert!(Library::open(&f.0.join("test.sqlite")).is_err());
+    }
+}

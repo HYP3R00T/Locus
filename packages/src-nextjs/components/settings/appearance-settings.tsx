@@ -16,17 +16,28 @@ export function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <section aria-labelledby="appearance-heading" className="w-full max-w-3xl space-y-8 p-6 sm:p-10">
+    <section
+      aria-labelledby="appearance-heading"
+      className="w-full max-w-3xl space-y-8 p-6 sm:p-10"
+    >
       <div>
-        <h1 id="appearance-heading" className="text-lg font-medium tracking-tight">Appearance</h1>
-        <p className="mt-2 text-xs text-muted-foreground">Make this workspace comfortable for you.</p>
+        <h1 id="appearance-heading" className="text-lg font-medium tracking-tight">
+          Appearance
+        </h1>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Make this workspace comfortable for you.
+        </p>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-5 border-b pb-6">
         <div>
-          <h2 id="theme-heading" className="text-sm font-medium">Color theme</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Follow your system or choose a light or dark workspace.</p>
+          <h2 id="theme-heading" className="text-sm font-medium">
+            Color theme
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Follow your system or choose a light or dark workspace.
+          </p>
         </div>
-        <div role="group" aria-labelledby="theme-heading" className="flex gap-1">
+        <fieldset aria-labelledby="theme-heading" className="flex gap-1">
           {themes.map(({ value, label, icon: Icon }) => (
             <Button
               key={value}
@@ -38,7 +49,7 @@ export function AppearanceSettings() {
               {label}
             </Button>
           ))}
-        </div>
+        </fieldset>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
         <AppVersion />
