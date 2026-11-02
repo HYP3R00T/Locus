@@ -30,6 +30,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Rajesh Das",
+    "copyright": "Copyright (c) 2026 Rajesh Das",
+    "license": "MIT",
     "shortDescription": "A workspace for study and research",
     "icon": [
       "icons/32x32.png",
@@ -40,6 +43,15 @@
     ],
     "category": "Education",
     "homepage": "https://locus.hyperoot.dev/",
-    "longDescription": "A local workspace for reading books and papers, drawing handwritten notes, and returning to your study materials. Organize PDFs without copying them and arrange reading and drawing panes side by side."
+    "longDescription": "A local workspace for reading books and papers, drawing handwritten notes, and returning to your study materials. Organize PDFs without copying them and arrange reading and drawing panes side by side.",
+    "linux": {
+      "deb": {
+        "section": "education",
+        "files": {
+          "/usr/share/metainfo/dev.hyperoot.locus.metainfo.xml": "metadata/dev.hyperoot.locus.metainfo.xml",
+          "/usr/share/doc/locus/copyright": "../../LICENSE"
+        }
+      }
+    }
   }
 }

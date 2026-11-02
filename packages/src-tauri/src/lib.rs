@@ -4,8 +4,21 @@ use library::{Action, Library, PdfInfo, Snapshot};
 use std::sync::Arc;
 use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_window_state::StateFlags;
 
 type Store = Arc<Library>;
+
+fn window_state_flags() -> StateFlags {
+    let flags = StateFlags::SIZE | StateFlags::MAXIMIZED;
+    // Wayland compositors control placement; querying a position can fail and prevent saving.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WAYLAND_DISPLAY").is_some()
+        || std::env::var("XDG_SESSION_TYPE").is_ok_and(|session| session == "wayland")
+    {
+        return flags;
+    }
+    flags | StateFlags::POSITION
+}
 
 #[tauri::command]
 async fn read_drawing(store: State<'_, Store>, drawing_id: String) -> Result<String, String> {
@@ -13,6 +26,7 @@ async fn read_drawing(store: State<'_, Store>, drawing_id: String) -> Result<Str
     tauri::async_runtime::spawn_blocking(move || store.read_drawing(&drawing_id))
         .await
         .map_err(|e| e.to_string())?
+        .inspect_err(|_| log::warn!("Could not read drawing"))
 }
 
 #[tauri::command]
@@ -25,6 +39,7 @@ async fn save_drawing(
     tauri::async_runtime::spawn_blocking(move || store.save_drawing(&drawing_id, &scene))
         .await
         .map_err(|e| e.to_string())?
+        .inspect_err(|_| log::warn!("Could not save drawing"))
 }
 
 #[tauri::command]
@@ -33,6 +48,7 @@ async fn library_action(store: State<'_, Store>, action: Action) -> Result<Snaps
     tauri::async_runtime::spawn_blocking(move || store.apply(action))
         .await
         .map_err(|e| e.to_string())?
+        .inspect_err(|_| log::warn!("Could not apply library action"))
 }
 #[tauri::command]
 async fn attach_pdf(
@@ -64,6 +80,7 @@ async fn attach_pdf(
     })
     .await
     .map_err(|e| e.to_string())?
+    .inspect_err(|_| log::warn!("Could not attach or relink PDF"))
 }
 #[tauri::command]
 async fn pdf_info(store: State<'_, Store>, document_id: String) -> Result<PdfInfo, String> {
@@ -71,6 +88,7 @@ async fn pdf_info(store: State<'_, Store>, document_id: String) -> Result<PdfInf
     tauri::async_runtime::spawn_blocking(move || store.info(&document_id))
         .await
         .map_err(|e| e.to_string())?
+        .inspect_err(|_| log::warn!("Could not read PDF metadata"))
 }
 #[tauri::command]
 async fn read_pdf_range(
@@ -87,10 +105,25 @@ async fn read_pdf_range(
     })
     .await
     .map_err(|e| e.to_string())?
+    .inspect_err(|_| log::warn!("Could not read PDF range"))
 }
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .filter(|metadata| metadata.target() == module_path!())
+                .max_file_size(1_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(2))
+                .build(),
+        )
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(window_state_flags())
+                .with_filter(|label| label == "main")
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_opener::Builder::new()
@@ -100,9 +133,11 @@ pub fn run() {
         .setup(|app| {
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
-            let library =
-                Library::open(&directory.join("library.sqlite")).map_err(std::io::Error::other)?;
+            let library = Library::open(&directory.join("library.sqlite"))
+                .inspect_err(|_| log::error!("Could not open study library"))
+                .map_err(std::io::Error::other)?;
             app.manage(Arc::new(library));
+            log::info!("Locus {} initialized", app.package_info().version);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

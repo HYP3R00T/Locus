@@ -8,6 +8,8 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Restore the main window's size and maximized state between sessions, with position restoration where supported.
+- Keep bounded local diagnostic logs for startup and native operation failures without recording study content.
 - Debian packaging is available for local testing.
 - Read the user guide, follow planned work, and review versioned changes on the new Locus website.
 - Organize books and papers into workspaces and folders without moving or copying your PDFs.
@@ -21,6 +23,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Include the developer's name, license, project links, and application details in Debian packaging metadata.
 - Correct PDF page sizing to keep text sharp instead of shrinking the rendered page.
 - Work around a Linux rendering issue that blurred the interface at certain scroll positions.
 - Keep drawings open when a save fails during normal window closing, so you can retry.

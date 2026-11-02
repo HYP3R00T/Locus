@@ -78,6 +78,31 @@ A package built on your machine may need newer system libraries than an older De
 provides. For distributable builds, use a consistent baseline. The manual installer workflow uses Ubuntu
 22.04; installing on other distributions still needs testing. A local build is not automatically a release.
 
+### Application metadata
+
+Tauri's bundle configuration supplies the publisher, license, descriptions, homepage, and Debian section.
+Cargo's author supplies the Debian maintainer name. Keep these identities consistent when changing ownership.
+The package also installs the existing license under `/usr/share/doc/locus/copyright`.
+
+[AppStream metadata](../packages/src-tauri/metadata/dev.hyperoot.locus.metainfo.xml) is maintained in
+`packages/src-tauri/metadata/` and installed under `/usr/share/metainfo/`. It describes the developer,
+features, categories, search keywords, and homepage, help, issue tracker, and source links using the
+[standard Linux format](https://www.freedesktop.org/software/appstream/docs/sect-Metadata-Application.html).
+Its launchable ID must match Tauri's generated `Locus.desktop` entry. Software centers decide which fields
+to display and may show less information for a local DEB than for a repository catalog entry.
+
+After changing metadata, extract the generated package into a temporary directory and validate its contents:
+
+```bash
+dpkg-deb --extract packages/src-tauri/target/release/bundle/deb/Locus_0.1.0_amd64.deb /tmp/locus-package-check
+appstreamcli validate-tree --no-net /tmp/locus-package-check
+desktop-file-validate /tmp/locus-package-check/usr/share/applications/Locus.desktop
+```
+
+Use the actual package filename and a fresh temporary directory. These validators are provided by the
+`appstream` and `desktop-file-utils` packages. Screenshots, content ratings, and dated release entries
+are not supplied yet; add them only when assessed or available, without inventing publication history.
+
 ## Install and test locally
 
 Use your actual generated filename:
