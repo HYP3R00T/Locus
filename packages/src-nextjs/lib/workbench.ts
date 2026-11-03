@@ -30,6 +30,7 @@ export const COMMANDS = [
     binding: "Mod+Shift+B",
   },
   { id: "preferences", title: "Open Preferences", scope: "global", binding: "Mod+," },
+  { id: "theme.select", title: "Preferences: Color Theme", scope: "global", binding: "" },
   { id: "pdf.page", title: "PDF: Go to Page", scope: "pdf", binding: "Mod+G" },
   { id: "pdf.zoomIn", title: "PDF: Zoom In", scope: "pdf", binding: "Mod+=" },
   { id: "pdf.zoomOut", title: "PDF: Zoom Out", scope: "pdf", binding: "Mod+-" },
@@ -43,6 +44,30 @@ export const COMMANDS = [
   },
 ] as const satisfies readonly { id: string; title: string; scope: CommandScope; binding: string }[];
 export type CommandId = (typeof COMMANDS)[number]["id"];
+export const COMMAND_GROUPS = [
+  "Workspace",
+  "Layout",
+  "Navigation",
+  "Preferences",
+  "PDF",
+  "Whiteboard",
+] as const;
+export function commandGroup(id: CommandId): (typeof COMMAND_GROUPS)[number] {
+  if (id.startsWith("pdf.") && id !== "pdf.add") return "PDF";
+  if (id.startsWith("drawing.")) return "Whiteboard";
+  if (id.startsWith("layout.") || id.startsWith("pane.")) return "Layout";
+  if (id === "palette" || id.startsWith("navigation.")) return "Navigation";
+  if (id === "preferences" || id.startsWith("theme.")) return "Preferences";
+  return "Workspace";
+}
+// Human-readable descriptions of the dispatch rules below the command registry.
+export function shortcutWhen(id: CommandId): string {
+  const command = COMMANDS.find((command) => command.id === id);
+  if (command?.scope === "pdf") return "PDF pane active · outside text fields";
+  if (command?.scope === "drawing") return "Whiteboard pane active";
+  if (id === "palette" || id === "pane.close") return "Anywhere in Locus";
+  return "Outside text fields · command palette closed";
+}
 export function commandsForScope(scope: CommandScope | null) {
   return COMMANDS.filter((command) => command.scope === "global" || command.scope === scope);
 }

@@ -1,60 +1,92 @@
 "use client";
 
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useTheme } from "next-themes";
-import { AboutDialog } from "@/components/about-dialog";
-import { AppVersion } from "@/components/app-version";
+import { MonitorIcon, MoonIcon, SunIcon, UploadIcon } from "lucide-react";
+import { useConfiguration } from "@/components/configuration-provider";
+import { SettingRow } from "@/components/settings/setting-row";
 import { Button } from "@/components/ui/button";
-
-const themes = [
-  { value: "system", label: "System", icon: MonitorIcon },
-  { value: "light", label: "Light", icon: SunIcon },
-  { value: "dark", label: "Dark", icon: MoonIcon },
-] as const;
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function AppearanceSettings() {
-  const { theme, setTheme } = useTheme();
+  const { appearance, selectTheme, themes, writable, native, importTheme, warnings } =
+    useConfiguration();
+  const selected = themes.find((theme) => theme.id === appearance.theme);
 
   return (
-    <section
-      aria-labelledby="appearance-heading"
-      className="w-full max-w-3xl space-y-8 p-6 sm:p-10"
-    >
-      <div>
-        <h1 id="appearance-heading" className="text-lg font-medium tracking-tight">
-          Appearance
-        </h1>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Make this workspace comfortable for you.
+    <>
+      <SettingRow id="appearance.theme">
+        <Select
+          value={appearance.theme}
+          disabled={!writable}
+          onValueChange={(value) => {
+            if (value) void selectTheme(value);
+          }}
+        >
+          <SelectTrigger
+            aria-labelledby="appearance.theme-label"
+            aria-describedby="appearance.theme-description"
+            className="w-80 max-w-full"
+          >
+            <SelectValue>
+              {appearance.theme === "system"
+                ? "Follow system"
+                : (selected?.name ?? "Unavailable theme")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            <SelectItem value="system">
+              <MonitorIcon className="size-3.5" />
+              Follow system
+            </SelectItem>
+            {(["light", "dark"] as const).map((mode) => (
+              <SelectGroup key={mode}>
+                <SelectSeparator />
+                <SelectLabel>{mode === "light" ? "Light themes" : "Dark themes"}</SelectLabel>
+                {themes
+                  .filter((theme) => theme.mode === mode)
+                  .map((theme) => (
+                    <SelectItem key={theme.id} value={theme.id}>
+                      {mode === "light" ? (
+                        <SunIcon className="size-3.5" />
+                      ) : (
+                        <MoonIcon className="size-3.5" />
+                      )}
+                      {theme.name}
+                    </SelectItem>
+                  ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-2 text-muted-foreground">
+          The title-bar toggle switches between your preferred light and dark themes.
         </p>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-5 border-b pb-6">
-        <div>
-          <h2 id="theme-heading" className="text-sm font-medium">
-            Color theme
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Follow your system or choose a light or dark workspace.
-          </p>
-        </div>
-        <fieldset aria-labelledby="theme-heading" className="flex gap-1">
-          {themes.map(({ value, label, icon: Icon }) => (
-            <Button
-              key={value}
-              variant={theme === value ? "secondary" : "outline"}
-              aria-pressed={theme === value}
-              onClick={() => setTheme(value)}
-            >
-              <Icon aria-hidden="true" />
-              {label}
-            </Button>
+      </SettingRow>
+      <SettingRow id="appearance.import">
+        <Button
+          variant="outline"
+          disabled={!native || !writable}
+          onClick={() => void importTheme()}
+        >
+          <UploadIcon />
+          Import theme
+        </Button>
+      </SettingRow>
+      {warnings.length > 0 && (
+        <div role="status" className="space-y-1 px-3 text-xs text-muted-foreground">
+          {warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
           ))}
-        </fieldset>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
-        <AppVersion />
-        <AboutDialog />
-      </div>
-    </section>
+        </div>
+      )}
+    </>
   );
 }
