@@ -43,6 +43,13 @@ the left edge of navigation and the space below the title bar. The active pane i
 remain unchanged when focus moves. Six-pixel gutters have three-dot grips and highlight across the entire gap
 on hover, dragging, or keyboard focus, keeping their hit areas separate from content scroll containers.
 
+Material folders expand as an accordion: one sibling folder can be open at each level. Opening another
+closes the previous sibling; opening a subfolder keeps its parent open. Collapsing the materials panel
+preserves that branch. Reopening reveals entries with a brief staggered depth/slide effect, capped so large
+trees do not keep users waiting. Transforms clear after the reveal to keep resting text sharp.
+Folder contents animate their height. Reduced-motion
+preferences disable both content animations.
+
 PDF fit-to-width follows its pane, reserves a vertical scrollbar lane, and suppresses temporary horizontal overflow
 while resizing. Fixed zoom and fit-to-height still allow horizontal scrolling when the page is wider than its pane.
 Fit modes follow pane resizing through PDF.js's delayed zoom API, temporarily reusing rendered canvases.

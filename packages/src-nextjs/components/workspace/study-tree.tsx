@@ -54,11 +54,15 @@ export function StudyTree({
   onRename: (item: Removal) => void;
   onMove: (documentId: string, folderId: string | null) => void;
 }) {
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, string | null>>({});
   useEffect(() => {
-    const parentId = library.folders.find((folder) => folder.id === activeFolderId)?.parentId;
-    if (parentId)
-      setExpandedFolders((old) => (old[parentId] === false ? { ...old, [parentId]: true } : old));
+    const folder = library.folders.find((item) => item.id === activeFolderId);
+    if (folder?.parentId)
+      setExpandedFolders((old) =>
+        old[folder.workspaceId] === folder.parentId
+          ? old
+          : { ...old, [folder.workspaceId]: folder.parentId },
+      );
   }, [activeFolderId, library.folders]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -66,6 +70,10 @@ export function StudyTree({
     return <p className="px-5 text-xs text-muted-foreground">Create a workspace to add books.</p>;
   const documents = library.documents.filter((d) => d.workspaceId === workspace.id);
   const folders = library.folders.filter((f) => f.workspaceId === workspace.id);
+  let revealIndex = 0;
+  function revealStyle() {
+    return { animationDelay: `${60 + Math.min(revealIndex++, 8) * 20}ms` };
+  }
   function dropProps(folderId: string | null) {
     const target = folderId ?? "root";
     return {
@@ -104,6 +112,8 @@ export function StudyTree({
     const item: Removal = { kind: "document", id: document.id, title: document.title };
     return menu(
       <NavigationAction
+        data-tree-entry
+        style={revealStyle()}
         draggable={!disabled}
         aria-haspopup="menu"
         aria-current={selectedId === document.id ? "true" : undefined}
@@ -168,6 +178,13 @@ export function StudyTree({
   }
   function folderRow(folder: Folder) {
     const item: Removal = { kind: "folder", id: folder.id, title: folder.title };
+    const group = folder.parentId ?? folder.workspaceId;
+    const activeFolder = folders.find((item) => item.id === activeFolderId);
+    const defaultOpen = folder.parentId
+      ? null
+      : (activeFolder?.parentId ?? activeFolder?.id ?? folders.find((item) => !item.parentId)?.id);
+    const open =
+      (expandedFolders[group] === undefined ? defaultOpen : expandedFolders[group]) === folder.id;
     return (
       <div
         key={folder.id}
@@ -178,13 +195,17 @@ export function StudyTree({
         )}
       >
         <Collapsible
-          open={expandedFolders[folder.id] ?? true}
-          onOpenChange={(open) => setExpandedFolders((old) => ({ ...old, [folder.id]: open }))}
+          open={open}
+          onOpenChange={(nextOpen) =>
+            setExpandedFolders((old) => ({ ...old, [group]: nextOpen ? folder.id : null }))
+          }
         >
           {menu(
             <CollapsibleTrigger
               render={
                 <NavigationAction
+                  data-tree-entry
+                  style={revealStyle()}
                   aria-haspopup="menu"
                   aria-current={activeFolderId === folder.id ? "true" : undefined}
                   onClick={() => onFolderSelect(folder.id)}
@@ -225,7 +246,7 @@ export function StudyTree({
               </ContextMenuItem>
             </>,
           )}
-          <CollapsibleContent>
+          <CollapsibleContent className="locus-tree-children">
             <ul className="tree-children">
               {folders
                 .filter((child) => child.parentId === folder.id)
@@ -273,6 +294,8 @@ export function StudyTree({
             <div key={drawing.id}>
               {menu(
                 <NavigationAction
+                  data-tree-entry
+                  style={revealStyle()}
                   draggable={!disabled}
                   onDragStart={(e) => {
                     e.dataTransfer.setData("application/x-locus-drawing", drawing.id);
