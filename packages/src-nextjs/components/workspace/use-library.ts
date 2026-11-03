@@ -11,6 +11,7 @@ import {
   libraryAction,
   type StudyDocument,
 } from "@/lib/library";
+import { flushSessions, registerSessionWriter, restoreSession } from "@/lib/sessions";
 import {
   activeStudyPane,
   createStudyLayout,
@@ -18,6 +19,7 @@ import {
   type MaterialOpenTarget,
   type PaneContent,
   type ReadingPosition,
+  type StudyLayout,
   type StudyPane,
   studyLayoutReducer,
 } from "@/lib/study-layout";
@@ -33,10 +35,12 @@ export function useLibrary() {
     activeId.current = layout.activeId;
   }, [layout.activeId]);
   const positions = useRef(new Map<string, ReadingPosition & { documentId: string }>());
-  function resetLayout() {
-    activeId.current = "initial-pane";
+  const sessions = useRef(new Map<string, StudyLayout>());
+  function restoreWorkspace(id: string | null, data = library) {
+    const next = id ? restoreSession(sessions.current.get(id), data, id) : createStudyLayout();
+    activeId.current = next.activeId;
     positions.current.clear();
-    dispatchLayout({ type: "reset" });
+    dispatchLayout({ type: "replace", layout: next });
   }
   function select(documentId: string, target: MaterialOpenTarget = "active") {
     chooseFolder(
@@ -51,6 +55,68 @@ export function useLibrary() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const sessionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const savedSessions = useRef(new Map<string, string>());
+  const sessionState = useRef({ library, workspaceId, layout, ready, native });
+  sessionState.current = { library, workspaceId, layout, ready, native };
+  const persistSession = useCallback(async () => {
+    clearTimeout(sessionTimer.current);
+    const current = sessionState.current;
+    if (
+      !current.ready ||
+      !current.native ||
+      !current.workspaceId ||
+      !current.library.workspaces.some((item) => item.id === current.workspaceId)
+    )
+      return;
+    const snapshot = restoreSession(
+      {
+        ...current.layout,
+        columns: current.layout.columns.map((column) => ({
+          ...column,
+          panes: column.panes.map((pane) => {
+            const position = positions.current.get(pane.id);
+            return position &&
+              pane.content?.kind === "pdf" &&
+              position.documentId === pane.content.id
+              ? {
+                  ...pane,
+                  position: {
+                    pageIndex: position.pageIndex,
+                    y: position.y,
+                    positionVersion: position.positionVersion,
+                  },
+                }
+              : pane;
+          }),
+        })),
+      },
+      current.library,
+      current.workspaceId,
+    );
+    sessions.current.set(current.workspaceId, snapshot);
+    const serialized = JSON.stringify(snapshot);
+    if (savedSessions.current.get(current.workspaceId) === serialized) return;
+    await libraryAction({
+      type: "saveSession",
+      session: { version: 1, workspaceId: current.workspaceId, layout: snapshot },
+    });
+    savedSessions.current.set(current.workspaceId, serialized);
+  }, []);
+  const scheduleSession = useCallback(() => {
+    clearTimeout(sessionTimer.current);
+    sessionTimer.current = setTimeout(() => {
+      void persistSession().catch((reason) =>
+        setError(`Could not save your study session: ${String(reason)}`),
+      );
+    }, 350);
+  }, [persistSession]);
+  useEffect(() => {
+    if (ready && native && workspaceId && layout.columns.length) scheduleSession();
+    return () => clearTimeout(sessionTimer.current);
+  }, [layout, workspaceId, ready, native, scheduleSession]);
+  useEffect(() => registerSessionWriter(persistSession), [persistSession]);
+
   useEffect(() => {
     let alive = true;
     libraryAction({ type: "list" })
@@ -59,9 +125,16 @@ export function useLibrary() {
         setLibrary(data);
         setNative(desktop());
         const saved = localStorage.getItem("locus-workspace");
-        setWorkspaceId(
-          data.workspaces.find((w) => w.id === saved)?.id ?? data.workspaces[0]?.id ?? null,
-        );
+        for (const session of data.sessions)
+          sessions.current.set(session.workspaceId, session.layout);
+        const id =
+          data.workspaces.find((w) => w.id === saved)?.id ?? data.workspaces[0]?.id ?? null;
+        setWorkspaceId(id);
+        const restored = id
+          ? restoreSession(sessions.current.get(id), data, id)
+          : createStudyLayout();
+        activeId.current = restored.activeId;
+        dispatchLayout({ type: "replace", layout: restored });
         setReady(true);
       })
       .catch((e) => {
@@ -76,8 +149,11 @@ export function useLibrary() {
     };
   }, []);
   const chooseWorkspace = (id: string) => {
-    setWorkspaceId(id);
-    if (id !== workspaceId) resetLayout();
+    if (id !== workspaceId) {
+      void persistSession().catch((reason) => setError(String(reason)));
+      setWorkspaceId(id);
+      restoreWorkspace(id);
+    }
     localStorage.setItem("locus-workspace", id);
   };
   async function mutate(action: LibraryAction) {
@@ -85,7 +161,7 @@ export function useLibrary() {
     setError(null);
     try {
       if (action.type === "removeDrawing" || action.type === "removeWorkspace")
-        await flushDrawings();
+        await Promise.all([flushDrawings(), flushSessions()]);
       const data = await libraryAction(action);
       setLibrary(data);
       if (action.type === "createWorkspace") {
@@ -99,8 +175,9 @@ export function useLibrary() {
         );
         if (added) chooseFolder(added.id);
       } else if (!data.workspaces.some((w) => w.id === workspaceId)) {
-        setWorkspaceId(data.workspaces[0]?.id ?? null);
-        resetLayout();
+        const id = data.workspaces[0]?.id ?? null;
+        setWorkspaceId(id);
+        restoreWorkspace(id, data);
       }
       return true;
     } catch (e) {
@@ -308,19 +385,28 @@ export function useLibrary() {
   }
   const savePanePosition = useCallback(
     (paneId: string, document: StudyDocument, pageIndex: number, y: number) => {
+      if (document.workspaceId !== sessionState.current.workspaceId)
+        return savePosition(document, pageIndex, y);
       positions.current.set(paneId, { documentId: document.id, pageIndex, y, positionVersion: 2 });
+      scheduleSession();
       // Background viewers retain their own position without overwriting the resume location.
       return activeId.current === paneId ? savePosition(document, pageIndex, y) : Promise.resolve();
     },
-    [savePosition],
+    [savePosition, scheduleSession],
   );
   const rememberPanePosition = useCallback(
     (paneId: string, document: StudyDocument, pageIndex: number, y: number) => {
+      if (document.workspaceId !== sessionState.current.workspaceId) return;
       positions.current.set(paneId, { documentId: document.id, pageIndex, y, positionVersion: 2 });
+      scheduleSession();
     },
-    [],
+    [scheduleSession],
   );
+  const expandFolder = useCallback((group: string, folderId: string | null) => {
+    dispatchLayout({ type: "folders", group, folderId });
+  }, []);
   return {
+    expandFolder,
     library,
     workspace,
     activeFolder,
@@ -344,6 +430,22 @@ export function useLibrary() {
     mutate,
     addPdf,
     layout,
+    saveLayoutSizes: (sizes: Record<string, number>, columnId?: string) => {
+      dispatchLayout({
+        type: "replace",
+        layout: {
+          ...layout,
+          columns: layout.columns.map((column) => ({
+            ...column,
+            size: !columnId ? (sizes[column.id] ?? column.size) : column.size,
+            panes: column.panes.map((pane) => ({
+              ...pane,
+              size: columnId === column.id ? (sizes[pane.id] ?? pane.size) : pane.size,
+            })),
+          })),
+        },
+      });
+    },
     activatePane,
     splitPane,
     closePane,

@@ -28,6 +28,8 @@ export function StudyTree({
   workspace,
   selectedId,
   activeFolderId,
+  expandedFolders,
+  onExpandFolder,
   onFolderSelect,
   disabled,
   onSelect,
@@ -43,6 +45,8 @@ export function StudyTree({
   workspace: Workspace | null;
   selectedId?: string;
   activeFolderId: string | null;
+  expandedFolders: Record<string, string | null>;
+  onExpandFolder: (group: string, folderId: string | null) => void;
   onFolderSelect: (id: string | null) => void;
   disabled: boolean;
   onSelect: (item: StudyDocument, target?: MaterialOpenTarget) => void;
@@ -54,16 +58,10 @@ export function StudyTree({
   onRename: (item: Removal) => void;
   onMove: (documentId: string, folderId: string | null) => void;
 }) {
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, string | null>>({});
   useEffect(() => {
     const folder = library.folders.find((item) => item.id === activeFolderId);
-    if (folder?.parentId)
-      setExpandedFolders((old) =>
-        old[folder.workspaceId] === folder.parentId
-          ? old
-          : { ...old, [folder.workspaceId]: folder.parentId },
-      );
-  }, [activeFolderId, library.folders]);
+    if (folder?.parentId) onExpandFolder(folder.workspaceId, folder.parentId);
+  }, [activeFolderId, library.folders, onExpandFolder]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   if (!workspace)
@@ -196,9 +194,7 @@ export function StudyTree({
       >
         <Collapsible
           open={open}
-          onOpenChange={(nextOpen) =>
-            setExpandedFolders((old) => ({ ...old, [group]: nextOpen ? folder.id : null }))
-          }
+          onOpenChange={(nextOpen) => onExpandFolder(group, nextOpen ? folder.id : null)}
         >
           {menu(
             <CollapsibleTrigger

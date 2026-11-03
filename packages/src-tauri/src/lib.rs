@@ -1,5 +1,6 @@
 mod configuration;
 mod library;
+mod session;
 
 use library::{Action, Library, PdfInfo, Snapshot};
 use std::sync::Arc;

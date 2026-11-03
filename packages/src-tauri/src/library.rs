@@ -1,3 +1,4 @@
+use crate::session::Session;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -70,6 +71,7 @@ pub struct Snapshot {
     documents: Vec<Document>,
     drawings: Vec<Drawing>,
     navigation: Vec<Navigation>,
+    sessions: Vec<Session>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -86,6 +88,9 @@ pub struct Drawing {
 )]
 pub enum Action {
     List,
+    SaveSession {
+        session: Session,
+    },
     CreateDrawing {
         workspace_id: String,
         title: String,
@@ -171,7 +176,7 @@ impl Library {
                     .map_err(err)?;
                 tx.commit().map_err(err)?;
             }
-            1..=6 => {}
+            1..=7 => {}
             _ => return Err("This library was created by a newer Locus version.".into()),
         }
         if version < 2 {
@@ -204,6 +209,12 @@ impl Library {
                 .map_err(err)?;
             tx.commit().map_err(err)?;
         }
+        if version < 7 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/007_workspace_sessions.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
         Ok(Self {
             db: Mutex::new(db),
             drawings_root: path
@@ -217,6 +228,13 @@ impl Library {
         let tx = db.transaction().map_err(err)?;
         match action {
             Action::List => {}
+            Action::SaveSession { session } => {
+                session.validate()?;
+                let state = serde_json::to_string(&session).map_err(err)?;
+                if state.len() > 65536 { return Err("Workspace session is too large.".into()); }
+                tx.execute("INSERT INTO workspace_sessions(workspace_id,state) VALUES(?1,?2) ON CONFLICT(workspace_id) DO UPDATE SET state=excluded.state",
+                    params![session.workspace_id, state]).map_err(err)?;
+            }
             Action::CreateDrawing { workspace_id, title: value } => {
                 let drawing_id = id();
                 tx.execute("INSERT INTO drawings VALUES(?1,?2,?3)", params![drawing_id, workspace_id, title(&value)?]).map_err(err)?;
@@ -555,7 +573,22 @@ fn snapshot(db: &Connection) -> Result<Snapshot> {
         .map_err(err)?
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(err)?;
+    let sessions = db
+        .prepare("SELECT state FROM workspace_sessions")
+        .map_err(err)?
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(err)?
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(err)?
+        .into_iter()
+        .filter_map(|state| {
+            let session = serde_json::from_str::<Session>(&state).ok()?;
+            session.validate().ok()?;
+            Some(session)
+        })
+        .collect();
     Ok(Snapshot {
+        sessions,
         navigation,
         workspaces,
         folders,
@@ -1080,7 +1113,7 @@ mod tests {
                 .unwrap()
                 .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
                 .unwrap(),
-            6
+            7
         );
     }
     #[test]
@@ -1179,5 +1212,73 @@ mod tests {
             .unwrap();
         assert!(data.workspaces[0].icon.is_none());
         assert!(data.workspaces[0].icon_color.is_none());
+    }
+    #[test]
+    fn sessions_survive_restart_validate_layout_and_cascade_with_workspace() {
+        let fixture = Fixture::new();
+        let store = fixture.store();
+        let w = workspace(&store);
+        let value = serde_json::json!({ "workspaceId":w, "version":1,
+            "layout": { "activeId":"right", "columns":[
+                {"id":"left", "size":65, "panes":[{"id":"p", "content":{"kind":"pdf","id":"book"}, "position":{"pageIndex":34,"y":0.4,"positionVersion":2}}]},
+                {"id":"right", "size":35, "panes":[{"id":"right", "content":{"kind":"drawing","id":"board"}}]}
+            ]}
+        });
+        let session: Session = serde_json::from_value(value.clone()).unwrap();
+        store.apply(Action::SaveSession { session }).unwrap();
+        drop(store);
+        let store = fixture.store();
+        let saved = store.apply(Action::List).unwrap();
+        assert_eq!(saved.sessions.len(), 1);
+        assert_eq!(saved.sessions[0].layout.active_id, "right");
+        assert_eq!(saved.sessions[0].layout.columns[0].size, Some(65.0));
+        assert_eq!(
+            saved.sessions[0].layout.columns[0].panes[0]
+                .position
+                .as_ref()
+                .unwrap()
+                .page_index,
+            34
+        );
+        for bad in [
+            {
+                let mut bad = value.clone();
+                bad["version"] = 2.into();
+                bad
+            },
+            {
+                let mut bad = value.clone();
+                bad["layout"]["activeId"] = "missing".into();
+                bad
+            },
+            {
+                let mut bad = value.clone();
+                bad["layout"]["columns"][1]["panes"][0]["id"] = "p".into();
+                bad
+            },
+            {
+                let mut bad = value.clone();
+                bad["layout"]["columns"][0]["size"] = (-2).into();
+                bad
+            },
+            {
+                let mut bad = value.clone();
+                bad["layout"]["columns"][0]["panes"][0]["position"]["y"] = 2.into();
+                bad
+            },
+        ] {
+            assert!(
+                store
+                    .apply(Action::SaveSession {
+                        session: serde_json::from_value(bad).unwrap()
+                    })
+                    .is_err()
+            );
+        }
+        assert_eq!(store.apply(Action::List).unwrap().sessions.len(), 1);
+        store
+            .apply(Action::RemoveWorkspace { workspace_id: w })
+            .unwrap();
+        assert!(store.apply(Action::List).unwrap().sessions.is_empty());
     }
 }

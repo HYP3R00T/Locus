@@ -184,8 +184,10 @@ or drag a pane cell from the title-bar map onto another pane to swap views. Wide
 Splitting always creates an empty pane. Choose a material there or from the sidebar; opening the same PDF
 in multiple panes still gives each view independent scrolling and zoom. A whiteboard has one live editor to avoid competing saves;
 opening an already visible whiteboard focuses its existing pane.
-Closing a pane leaves its PDFs attached. Layouts and individual pane positions last for the current workspace session;
-switching workspaces or restarting resets the layout. Only the active pane updates the document's saved resume location.
+Closing a pane leaves its PDFs attached. Open materials, split proportions, the active pane, individual PDF positions,
+and expanded folder branches restore per workspace after switching workspaces or restarting. PDF zoom returns to fit-to-width.
+Only the active pane updates the document's separate saved resume location. Normal closing flushes session and drawing writes;
+failed saves keep the window open for retry.
 Removal dialogs explain which references will disappear; original PDF files are never deleted.
 
 `components/layout` owns the shell, `components/workspace` owns library interactions and PDF rendering,

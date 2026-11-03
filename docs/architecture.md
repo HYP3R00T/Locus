@@ -56,7 +56,8 @@ Rust owns library persistence and native file validation. Names and file paths a
 stable IDs identify records. Removing references does not delete original PDFs or authored drawing files.
 [Storage](storage.md) owns the detailed schema, file layout, migrations, and removal semantics.
 
-The frontend owns session pane layout, command registration, save queues, and theme application. Rust owns
+The frontend manages pane layout and restores Rust-persisted workspace sessions, including pane contents,
+split proportions, PDF positions, and folder expansion. It also owns command registration, save queues, and theme application. Rust owns
 versioned preference/key-binding files and validated theme loading; [Configuration](configuration.md) owns
 paths, migration, and recovery. [Workbench](workbench.md) owns command scopes and pane behavior. One live editor per
 whiteboard avoids competing writes inside the application. Concurrent external editing is not coordinated.
