@@ -53,7 +53,8 @@ The website is not an npm workspace and is not imported or bundled by the applic
 ## Invariants and state
 
 Rust owns library persistence and native file validation. Names and file paths are display/location metadata;
-stable IDs identify records. Removing references does not delete original PDFs or authored drawing files.
+stable IDs identify records. Removing references preserves original PDFs and authored drawing files;
+the explicit whiteboard permanent-delete action also deletes that managed drawing file.
 [Storage](storage.md) owns the detailed schema, file layout, migrations, and removal semantics.
 
 The frontend manages pane layout and restores Rust-persisted workspace sessions, including pane contents,

@@ -75,6 +75,19 @@ export function AppShell() {
   const [title, setTitle] = useState("");
   const [rename, setRename] = useState<Removal | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
+  async function confirmRemoval(permanently = false) {
+    if (!removal || !data.workspace) return;
+    const ok = await data.mutate(
+      removal.kind === "drawing"
+        ? { type: permanently ? "deleteDrawing" : "removeDrawing", drawingId: removal.id }
+        : removal.kind === "workspace"
+          ? { type: "removeWorkspace", workspaceId: removal.id }
+          : removal.kind === "folder"
+            ? { type: "removeFolder", folderId: removal.id }
+            : { type: "removeDocument", workspaceId: data.workspace.id, documentId: removal.id },
+    );
+    if (ok) setRemoval(null);
+  }
   const workbench = useWorkbench();
   const liveData = useRef(data);
   liveData.current = data;
@@ -714,45 +727,64 @@ export function AppShell() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove {removal?.title}?</DialogTitle>
+            <DialogTitle>
+              {removal?.kind === "drawing"
+                ? `Remove whiteboard “${removal.title}”?`
+                : `Remove ${removal?.title}?`}
+            </DialogTitle>
             <DialogDescription>
-              {removal?.kind === "folder"
-                ? "Books in this folder and its subfolders will remain in the workspace. Child folders move to the workspace root."
-                : removal?.kind === "workspace"
-                  ? "This removes the workspace and its material references and reading positions. Whiteboard files are kept on disk."
-                  : removal?.kind === "drawing"
-                    ? "This removes the whiteboard reference. Its .excalidraw file is kept on disk."
-                    : "This removes the PDF reference and its reading position from this workspace."}{" "}
-              Original PDF files stay on your device.
+              {removal?.kind === "drawing" ? (
+                "Choose whether to keep the drawing file or delete it permanently."
+              ) : (
+                <>
+                  {removal?.kind === "folder"
+                    ? "Books in this folder and its subfolders will remain in the workspace. Child folders move to the workspace root."
+                    : removal?.kind === "workspace"
+                      ? "This removes the workspace and its material references and reading positions. Whiteboard files are kept on disk."
+                      : "This removes the PDF reference and its reading position from this workspace."}{" "}
+                  Original PDF files stay on your device.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
+          {removal?.kind === "drawing" && (
+            <div className="space-y-3 text-xs leading-5">
+              <div>
+                <h3 className="font-medium">Remove from workspace</h3>
+                <p className="text-muted-foreground">
+                  Remove this whiteboard from Locus and close its pane. Keep its .excalidraw file on
+                  disk so you can open it in another application.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium">Permanently delete</h3>
+                <p className="text-muted-foreground">
+                  Remove it from Locus and delete its .excalidraw file from disk. This bypasses the
+                  trash and cannot be undone.
+                </p>
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="ghost" disabled={data.busy} onClick={() => setRemoval(null)}>
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant={removal?.kind === "drawing" ? "outline" : "destructive"}
               disabled={data.busy}
-              onClick={async () => {
-                if (!removal || !data.workspace) return;
-                const ok = await data.mutate(
-                  removal.kind === "drawing"
-                    ? { type: "removeDrawing", drawingId: removal.id }
-                    : removal.kind === "workspace"
-                      ? { type: "removeWorkspace", workspaceId: removal.id }
-                      : removal.kind === "folder"
-                        ? { type: "removeFolder", folderId: removal.id }
-                        : {
-                            type: "removeDocument",
-                            workspaceId: data.workspace.id,
-                            documentId: removal.id,
-                          },
-                );
-                if (ok) setRemoval(null);
-              }}
+              onClick={() => void confirmRemoval()}
             >
               Remove
             </Button>
+            {removal?.kind === "drawing" && (
+              <Button
+                variant="destructive"
+                disabled={data.busy}
+                onClick={() => void confirmRemoval(true)}
+              >
+                Permanently delete
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

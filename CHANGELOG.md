@@ -8,6 +8,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Choose between removing a whiteboard reference and permanently deleting its drawing file, with explanations in the removal dialog.
 - Add PDFs and create whiteboards directly from the expanded materials panel header.
 - Start whiteboards with controls hidden by default; configure opening visibility separately from per-board shortcut toggles.
 - Match whiteboard controls and canvas paper to the app theme, retaining the standard drawing controls.

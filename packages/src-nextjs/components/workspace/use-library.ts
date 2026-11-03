@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useConfiguration } from "@/components/configuration-provider";
-import { flushDrawings } from "@/lib/drawings";
+import { flushDrawings, forgetDrawing } from "@/lib/drawings";
 import {
   attachPdf,
   desktop,
@@ -162,9 +162,21 @@ export function useLibrary() {
     setBusy(true);
     setError(null);
     try {
-      if (action.type === "removeDrawing" || action.type === "removeWorkspace")
+      if (
+        action.type === "removeDrawing" ||
+        action.type === "deleteDrawing" ||
+        action.type === "removeWorkspace"
+      )
         await Promise.all([flushDrawings(), flushSessions()]);
       const data = await libraryAction(action);
+      if (action.type === "removeDrawing" || action.type === "deleteDrawing")
+        forgetDrawing(action.drawingId);
+      if (action.type === "removeWorkspace")
+        library.drawings
+          .filter((drawing) => drawing.workspaceId === action.workspaceId)
+          .forEach((drawing) => {
+            forgetDrawing(drawing.id);
+          });
       setLibrary(data);
       if (action.type === "createWorkspace") {
         const added = data.workspaces.find(

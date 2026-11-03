@@ -87,8 +87,18 @@ Pending edits survive pane remounts in memory. Normal window closing flushes pen
 a failure keeps the window open. Crashes or forced termination can still lose the latest unsaved edits.
 Only registered drawing IDs can be read or saved; the backend validates the scene type and enforces a 64 MiB limit.
 
-Removing a whiteboard or workspace removes its database references while retaining `.excalidraw` files on disk.
-Those files can be opened externally; automatic orphan recovery and external-file change watching are not implemented.
+The whiteboard removal dialog offers two explicit choices:
+
+- **Remove:** remove its database reference and close its pane, keeping the `.excalidraw` file on disk.
+- **Permanently delete:** remove its reference and delete that managed drawing file, bypassing the trash.
+
+Removing an entire workspace continues to retain its whiteboard files. Permanent deletion accepts a registered
+drawing ID, never an arbitrary path. It shares the library mutex with saves; failed file removal rolls back the
+metadata transaction, and an already-missing file does not block reference cleanup. SQLite and filesystem
+operations are not one atomic transaction: a commit failure after successful unlink can leave a missing-file
+reference, which can be removed by retrying. After successful removal, frontend save caches discard the drawing
+and ignore late saves; native saves also reject unregistered IDs, preventing file recreation.
+Retained files can be opened externally; automatic orphan recovery and external-file change watching are not implemented.
 Back up both `library.sqlite` and the drawing directory. Opening a whiteboard again reads the file unless an unsaved local edit needs recovery.
 
 ## Verification
@@ -121,5 +131,6 @@ Migration 7 adds workspace sessions, deleted automatically with their workspace.
 the two-column/two-row limit, unique pane IDs, material kinds, positions, folder state, and a 64 KiB limit.
 Invalid stored sessions are ignored without blocking the library. Removed or foreign-workspace references
 become empty slots on restore; duplicate whiteboards are cleared to preserve one live editor per drawing.
-Original files and authored drawings are preserved. Older app binaries refuse schema 7;
+Original PDF files are preserved; authored drawings are deleted only through their explicit permanent-delete action.
+Older app binaries refuse schema 7;
 back up the library before upgrading if rollback to an older app is needed.

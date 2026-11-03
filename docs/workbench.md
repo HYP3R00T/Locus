@@ -44,6 +44,8 @@ The expanded materials panel places **Add PDF** and **New whiteboard** buttons a
 with the collapse control on the left.
 They use the same commands and shortcut-aware tooltips as the command palette. Add PDF targets the selected
 folder; new whiteboards belong to the current workspace. These buttons are hidden in collapsed and Settings navigation.
+Right-click a whiteboard and choose **Remove from workspace** to open a dialog explaining both choices:
+**Remove** keeps its drawing file, while **Permanently delete** removes it from disk without using the trash.
 Choose **Preferences: Color Theme** to open a searchable theme picker with System, Light themes, and Dark themes
 groups and a marker for the saved choice. The picker starts on that choice; moving the highlighted item
 previews its colors without writing preferences. Enter or click saves through the same configuration service as
