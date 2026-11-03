@@ -1,4 +1,5 @@
 "use client";
+import { ScrollArea } from "@base-ui/react/scroll-area";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ZoomInIcon, ZoomOutIcon } from "lucide-react";
@@ -156,15 +157,18 @@ export function PdfReader({
         markStartup("pdf_engine_ready", timingSlot.current);
         return engine;
       });
-      // Start independent module/metadata work together. Catch early module rejection
-      // immediately, even though its result is consumed after document parsing.
-      const viewerPromise = import("pdfjs-dist/web/pdf_viewer.mjs").then(
-        (module) => {
-          markStartup("pdf_viewer_ready", timingSlot.current);
-          return { module };
-        },
-        (error: unknown) => ({ error }),
-      );
+      // The viewer reads globalThis.pdfjsLib during module evaluation. The engine
+      // must publish it first; parallel imports race in packaged production chunks.
+      // Metadata still loads independently, and viewer import overlaps PDF parsing.
+      const viewerPromise = enginePromise
+        .then(() => import("pdfjs-dist/web/pdf_viewer.mjs"))
+        .then(
+          (module) => {
+            markStartup("pdf_viewer_ready", timingSlot.current);
+            return { module };
+          },
+          (error: unknown) => ({ error }),
+        );
       const infoPromise = invoke<{ length: number }>("pdf_info", { documentId: source.id }).then(
         (info) => {
           markStartup("pdf_metadata_ready", timingSlot.current);
@@ -593,25 +597,41 @@ export function PdfReader({
           Opening PDF…
         </p>
       )}
-      <div className="relative min-h-0 flex-1" hidden={!!error || passwordNeeded}>
-        <div
+      <ScrollArea.Root
+        className="relative min-h-0 flex-1 overflow-hidden bg-muted/20"
+        hidden={!!error || passwordNeeded}
+        onPointerDown={() => {
+          interacted.current = true;
+        }}
+      >
+        <ScrollArea.Viewport
           ref={scroll}
           role="document"
           aria-label="PDF pages"
           data-fit-width={zoomPreset === "page-width"}
-          className="locus-pdf-scroll absolute inset-0 overflow-auto bg-muted/20"
-          onPointerDown={() => {
-            interacted.current = true;
-          }}
+          className="locus-pdf-scroll absolute inset-0 right-2.5"
           onKeyDown={() => {
             interacted.current = true;
           }}
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to focus and scroll the PDF.
           tabIndex={0}
         >
-          <div ref={pages} className="pdfViewer locus-pdf-viewer" />
-        </div>
-      </div>
+          <ScrollArea.Content
+            ref={pages}
+            className="pdfViewer locus-pdf-viewer"
+            style={{ minWidth: 0 }}
+          />
+        </ScrollArea.Viewport>
+        <ScrollArea.Scrollbar className="locus-pdf-scrollbar flex w-2.5 touch-none select-none p-0.5">
+          <ScrollArea.Thumb className="w-full rounded-full bg-muted-foreground hover:bg-foreground" />
+        </ScrollArea.Scrollbar>
+        <ScrollArea.Scrollbar
+          orientation="horizontal"
+          className="locus-pdf-scrollbar flex h-2.5 touch-none select-none p-0.5"
+        >
+          <ScrollArea.Thumb className="h-full rounded-full bg-muted-foreground hover:bg-foreground" />
+        </ScrollArea.Scrollbar>
+        <ScrollArea.Corner />
+      </ScrollArea.Root>
     </section>
   );
 }
