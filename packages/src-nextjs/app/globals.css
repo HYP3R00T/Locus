@@ -286,6 +286,14 @@
   border-right: 0;
   border-radius: 6px 0 0 6px;
 }
+
+.locus-workspace-active,
+.locus-workspace-active:hover {
+  background: var(
+    --workspace-active-background,
+    color-mix(in srgb, var(--client-surface) 84%, var(--foreground))
+  );
+}
 .locus-navigation-context {
   border: 1px solid var(--sidebar-border);
   border-left: 0;

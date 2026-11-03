@@ -123,26 +123,28 @@ Copy a complete template from
 change `id` and `name`, and place it at `themes/<id>.json` in the config folder.
 Source templates and installed templates contain the same explicit colors.
 
-| Tokens                                              | Interface purpose                                |
-| --------------------------------------------------- | ------------------------------------------------ |
-| `background`, `foreground`                          | General application surface and text             |
-| `titlebar-background`, `titlebar-foreground`        | Custom window title bar                          |
-| `toolbar-background`, `toolbar-foreground`          | PDF controls                                     |
-| `pane-background`, `pane-foreground`, `pane-border` | Study pane frame and inherited text              |
-| `client-surface`, `context-surface`                 | Primary navigation and contextual surfaces       |
-| `card`, `card-foreground`                           | Card surfaces and text                           |
-| `popover`, `popover-foreground`                     | Command palette, menus, and popovers             |
-| `primary`, `primary-foreground`                     | Primary buttons and controls                     |
-| `secondary`, `secondary-foreground`                 | Secondary controls                               |
-| `muted`, `muted-foreground`                         | Subdued surfaces and text                        |
-| `accent`, `accent-foreground`                       | Hover/selected control surfaces and text         |
-| `destructive`                                       | Destructive actions and errors                   |
-| `border`, `input`, `ring`                           | General borders, input borders, focus indicators |
-| `sidebar`, `sidebar-foreground`                     | Sidebar-style controls                           |
-| `sidebar-primary`, `sidebar-primary-foreground`     | Primary navigation controls                      |
-| `sidebar-accent`, `sidebar-accent-foreground`       | Navigation hover/selection                       |
-| `sidebar-border`, `sidebar-ring`                    | Navigation frame borders and focus indicators    |
-| `chart-1` through `chart-5`                         | Shared chart palette tokens                      |
+| Tokens                                                                                                       | Interface purpose                                              |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `background`, `foreground`                                                                                   | General application surface and text                           |
+| `titlebar-background`, `titlebar-foreground`                                                                 | Custom window title bar                                        |
+| `toolbar-background`, `toolbar-foreground`                                                                   | PDF controls                                                   |
+| `pane-background`, `pane-foreground`, `pane-border`                                                          | Study pane frame and inherited text                            |
+| `client-surface`, `context-surface`                                                                          | Primary navigation and contextual surfaces                     |
+| `card`, `card-foreground`                                                                                    | Card surfaces and text                                         |
+| `popover`, `popover-foreground`                                                                              | Command palette, menus, and popovers                           |
+| `primary`, `primary-foreground`                                                                              | Primary buttons and controls                                   |
+| `secondary`, `secondary-foreground`                                                                          | Secondary controls                                             |
+| `muted`, `muted-foreground`                                                                                  | Subdued surfaces and text                                      |
+| `accent`, `accent-foreground`                                                                                | Hover/selected control surfaces and text                       |
+| `destructive`                                                                                                | Destructive actions and errors                                 |
+| `border`, `input`, `ring`                                                                                    | General borders, input borders, focus indicators               |
+| `sidebar`, `sidebar-foreground`                                                                              | Sidebar-style controls                                         |
+| `sidebar-primary`, `sidebar-primary-foreground`                                                              | Primary navigation controls                                    |
+| `sidebar-accent`, `sidebar-accent-foreground`                                                                | Navigation hover/selection                                     |
+| `sidebar-border`, `sidebar-ring`                                                                             | Navigation frame borders and focus indicators                  |
+| `chart-1` through `chart-5`                                                                                  | Shared chart palette tokens                                    |
+| `workspace-active-background`                                                                                | Active workspace fill, distinct from the primary panel surface |
+| `icon-red`, `icon-orange`, `icon-yellow`, `icon-green`, `icon-cyan`, `icon-blue`, `icon-purple`, `icon-pink` | Theme-aware workspace icon palette                             |
 
 These are semantic roles, not a separate property for every HTML element. Controls reuse the same
 roles to keep contrast and selection behavior consistent. PDFs retain their original page colors.

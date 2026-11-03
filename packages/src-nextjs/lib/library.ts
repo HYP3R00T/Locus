@@ -1,6 +1,11 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 
-export type Workspace = { id: string; title: string };
+export type Workspace = {
+  id: string;
+  title: string;
+  icon: string | null;
+  iconColor: string | null;
+};
 export type Folder = { id: string; workspaceId: string; title: string; parentId: string | null };
 export type StudyDocument = {
   id: string;
@@ -33,6 +38,13 @@ export type LibraryAction =
   | { type: "renameDrawing"; drawingId: string; title: string }
   | { type: "removeDrawing"; drawingId: string }
   | { type: "createWorkspace"; title: string }
+  | {
+      type: "updateWorkspace";
+      title: string;
+      workspaceId: string;
+      icon: string | null;
+      iconColor: string | null;
+    }
   | { type: "removeWorkspace"; workspaceId: string }
   | { type: "createFolder"; workspaceId: string; title: string; parentId?: string | null }
   | { type: "selectFolder"; workspaceId: string; folderId: string | null }

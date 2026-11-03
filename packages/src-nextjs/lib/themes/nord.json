@@ -42,6 +42,15 @@
     "toolbar-foreground": "#eceff4",
     "pane-background": "#2e3440",
     "pane-foreground": "#eceff4",
-    "pane-border": "#4c566a"
+    "pane-border": "#4c566a",
+    "workspace-active-background": "#2e3440",
+    "icon-red": "#bf616a",
+    "icon-orange": "#d08770",
+    "icon-yellow": "#ebcb8b",
+    "icon-green": "#a3be8c",
+    "icon-cyan": "#88c0d0",
+    "icon-blue": "#81a1c1",
+    "icon-purple": "#b48ead",
+    "icon-pink": "#c895bf"
   }
 }

@@ -46,10 +46,13 @@ import {
 import { StudyArea } from "@/components/workspace/study-area";
 import { type Removal, StudyTree } from "@/components/workspace/study-tree";
 import { useLibrary } from "@/components/workspace/use-library";
+import { WorkspaceEditor, WorkspaceSymbol } from "@/components/workspace/workspace-editor";
+import type { Workspace } from "@/lib/library";
 import { useNotice } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
+  const [appearance, setAppearance] = useState<Workspace | null>(null);
   const data = useLibrary();
   const [view, setView] = useState<"workspace" | "settings">("workspace");
   const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("appearance");
@@ -304,25 +307,17 @@ export function AppShell() {
               !compact && "min-w-0 flex-1",
               view === "workspace" &&
                 workspace.id === data.workspace?.id &&
-                "bg-sidebar-accent ring-1 ring-inset ring-sidebar-ring/50",
+                "locus-workspace-active",
             )}
             onClick={() => chooseWorkspace(workspace.id)}
           >
-            <span aria-hidden="true" className="w-4 shrink-0 text-center text-xs font-medium">
-              {workspace.title.slice(0, 1).toUpperCase()}
-            </span>
+            <WorkspaceSymbol workspace={workspace} />
             {!compact && <span className="truncate">{workspace.title}</span>}
           </NavigationAction>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem
-            disabled={data.busy}
-            onClick={() => {
-              setTitle(workspace.title);
-              setRename({ kind: "workspace", id: workspace.id, title: workspace.title });
-            }}
-          >
-            Rename workspace
+          <ContextMenuItem disabled={data.busy} onClick={() => setAppearance(workspace)}>
+            Edit Workspace
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -340,6 +335,23 @@ export function AppShell() {
   }
   return (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+      {appearance && (
+        <WorkspaceEditor
+          key={appearance.id}
+          workspace={appearance}
+          busy={data.busy}
+          onClose={() => setAppearance(null)}
+          onSave={(title, icon, iconColor) =>
+            data.mutate({
+              type: "updateWorkspace",
+              title,
+              workspaceId: appearance.id,
+              icon,
+              iconColor,
+            })
+          }
+        />
+      )}
       <NavigationLayout
         primaryExpanded={navigationExpanded}
         contextExpanded={contextVisible}

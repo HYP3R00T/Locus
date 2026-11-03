@@ -286,6 +286,11 @@ impl Configuration {
                         && existing.name == theme.name
                         && existing.mode == theme.mode
                         && ((existing.colors.is_empty() && theme.id.starts_with("default-"))
+                            || (existing.colors.len() == 40
+                                && existing
+                                    .colors
+                                    .iter()
+                                    .all(|(key, color)| theme.colors.get(key) == Some(color)))
                             || (existing.colors.len() == 33
                                 && existing
                                     .colors
@@ -637,6 +642,8 @@ mod tests {
         for key in added {
             nord.colors.remove(key);
         }
+        nord.colors
+            .retain(|key, _| !key.starts_with("icon-") && key != "workspace-active-background");
         assert_eq!(nord.colors.len(), 33);
         let path = fixture.0.join("themes/nord.json");
         write_json(&path, &nord, false).unwrap();
@@ -721,5 +728,25 @@ mod tests {
         assert_eq!(reloaded.preferences.shortcut_sort.direction, "desc");
         changed.shortcut_sort.column = "unknown".into();
         assert!(validate_preferences(&changed).is_err());
+    }
+    #[test]
+    fn expands_workspace_palette_roles_without_replacing_custom_edits() {
+        let fixture = Fixture::new();
+        let config = Configuration::new(fixture.0.clone());
+        config.load(None).unwrap();
+        let path = fixture.0.join("themes/nord.json");
+        let mut old: Theme = serde_json::from_value(read_json(&path).unwrap()).unwrap();
+        old.colors
+            .retain(|key, _| !key.starts_with("icon-") && key != "workspace-active-background");
+        assert_eq!(old.colors.len(), 40);
+        write_json(&path, &old, false).unwrap();
+        config.load(None).unwrap();
+        let upgraded: Theme = serde_json::from_value(read_json(&path).unwrap()).unwrap();
+        assert_eq!(upgraded.colors["icon-red"], "#bf616a");
+        old.colors.insert("background".into(), "#123456".into());
+        write_json(&path, &old, false).unwrap();
+        config.load(None).unwrap();
+        let preserved: Theme = serde_json::from_value(read_json(&path).unwrap()).unwrap();
+        assert_eq!(old.colors, preserved.colors);
     }
 }
