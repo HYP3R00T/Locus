@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConfiguration } from "@/components/configuration-provider";
 import { Button } from "@/components/ui/button";
-import { useWorkbench } from "@/components/workbench/workbench-context";
+import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { readDrawing, registerDrawingWriter, saveDrawing } from "@/lib/drawings";
 import type { Drawing } from "@/lib/library";
 import { useNotice } from "@/lib/notifications";
@@ -49,13 +49,22 @@ export function WhiteboardEditor({
   readyCallback.current = onReady;
   const timingSlot = useRef(startupSlot);
   timingSlot.current = startupSlot;
-  const { preferences } = useWorkbench();
   const { appearance } = useConfiguration();
   const openingPreferences = useRef(appearance);
   openingPreferences.current = appearance;
   const { resolvedTheme } = useTheme();
   const [status, setStatus] = useState("Opening…");
   const [ready, setReady] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(
+    appearance.whiteboardControlsVisibleByDefault,
+  );
+  useCommandHandlers(paneId, {
+    "drawing.controls": {
+      run: () => setControlsVisible((visible) => !visible),
+      enabled: ready,
+      pressed: controlsVisible,
+    },
+  });
   const [initialData, setInitialData] = useState<ExcalidrawProps["initialData"]>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -123,6 +132,7 @@ export function WhiteboardEditor({
         markStartup("whiteboard_scene_loaded", timingSlot.current);
         lastScene.current = scene;
         savedBackground.current = initial.appState?.viewBackgroundColor ?? "#ffffff";
+        setControlsVisible(openingPreferences.current.whiteboardControlsVisibleByDefault);
         // CSS supplies theme paper without Excalidraw's dark-mode canvas filter
         // transforming it. Preserve the file's paper color when autosaving.
         setInitialData({
@@ -150,11 +160,11 @@ export function WhiteboardEditor({
     };
   }, [drawing.id, loadAttempt]);
   useEffect(() => {
-    if (!ready || preferences.whiteboardControlsVisible) return;
+    if (!ready || controlsVisible) return;
     editor.current?.updateScene({
       appState: { openMenu: null, openDialog: null, openSidebar: null },
     });
-  }, [ready, preferences.whiteboardControlsVisible]);
+  }, [ready, controlsVisible]);
   function flush(): Promise<void> {
     if (!loaded.current || !latest.current) return pending.current;
     const [elements, appState, files] = latest.current;
@@ -215,7 +225,7 @@ export function WhiteboardEditor({
     <div
       ref={wrapper}
       data-whiteboard-id={paneId}
-      data-controls-visible={preferences.whiteboardControlsVisible}
+      data-controls-visible={controlsVisible}
       className="locus-whiteboard relative h-full min-h-0 min-w-0 overflow-hidden"
     >
       {loadError && (
@@ -244,7 +254,7 @@ export function WhiteboardEditor({
           {editorMenu}
         </Excalidraw>
       )}
-      {(preferences.whiteboardControlsVisible || !ready) && (
+      {(controlsVisible || !ready) && (
         <span
           role="status"
           className="pointer-events-none absolute right-3 bottom-3 text-[10px] text-muted-foreground"

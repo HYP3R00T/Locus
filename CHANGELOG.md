@@ -8,6 +8,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Start whiteboards with controls hidden by default; configure opening visibility separately from per-board shortcut toggles.
 - Match whiteboard controls and canvas paper to the app theme, retaining the standard drawing controls.
 - Open whiteboards with the pen selected; choose default ink color and stroke width in Whiteboard settings.
 - Record local millisecond startup timings for restoration, lazy imports, pane painting, and final reveal.

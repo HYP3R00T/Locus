@@ -92,8 +92,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     if (id === "palette") return true;
     if (id === "material.open") return materials.length > 0;
     if (id === "theme.select") return preferencesReady && preferencesWritable;
-    if (id === "drawing.controls")
-      return info.scope === "drawing" && preferencesReady && preferencesWritable;
     const command = handler(id);
     return !!command && command.enabled !== false;
   }
@@ -160,15 +158,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       setOpen(false);
       return;
     }
-    if (id === "drawing.controls") {
-      execute(() =>
-        updatePreferences({
-          ...preferences,
-          whiteboardControlsVisible: !preferences.whiteboardControlsVisible,
-        }),
-      );
-      return;
-    }
     const command = handler(id);
     if (command) execute(command.run);
   }
@@ -219,6 +208,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
         mac,
         perform,
         enabled,
+        pressed: (id) => handler(id)?.pressed ?? false,
         register,
         setMaterials,
       }}

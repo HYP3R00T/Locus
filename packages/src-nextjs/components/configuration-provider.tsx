@@ -67,7 +67,7 @@ function browserConfiguration(): Configuration {
       ...DEFAULT_APPEARANCE,
       theme:
         oldTheme === "dark" ? "default-dark" : oldTheme === "light" ? "default-light" : "system",
-      whiteboardControlsVisible: preferences.whiteboardControlsVisible,
+      whiteboardControlsVisibleByDefault: preferences.whiteboardControlsVisibleByDefault,
     },
     keybindings: { version: 1, bindings: preferences.keybindings },
     themes: BUILTIN_THEMES,
@@ -241,10 +241,10 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
     if (COMMANDS.some(({ id }) => value.keybindings[id] !== previous.keybindings[id])) {
       if (!(await change("keybindings", { version: 1, bindings: value.keybindings }))) return;
     }
-    if (value.whiteboardControlsVisible !== previous.whiteboardControlsVisible)
+    if (value.whiteboardControlsVisibleByDefault !== previous.whiteboardControlsVisibleByDefault)
       await change("preferences", {
         ...(live.current?.preferences ?? current.preferences),
-        whiteboardControlsVisible: value.whiteboardControlsVisible,
+        whiteboardControlsVisibleByDefault: value.whiteboardControlsVisibleByDefault,
       });
   }
   async function selectTheme(id: string) {

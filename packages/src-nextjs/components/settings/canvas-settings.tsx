@@ -36,20 +36,21 @@ export function CanvasSettings() {
             aria-labelledby="canvas.controls-label"
             aria-describedby="canvas.controls-description"
             disabled={!preferencesReady || !preferencesWritable}
-            checked={preferences.whiteboardControlsVisible}
+            checked={preferences.whiteboardControlsVisibleByDefault}
             onCheckedChange={(checked) =>
               void updatePreferences({
                 ...preferences,
-                whiteboardControlsVisible: checked,
+                whiteboardControlsVisibleByDefault: checked,
               })
             }
           />
-          <span>Show the drawing interface</span>
+          <span>Show controls when opening a whiteboard</span>
         </label>
         <p className="mt-2 text-muted-foreground">
           {shortcut ? (
             <>
-              Shortcut: <kbd>{shortcut}</kbd> while a whiteboard is active.
+              Toggle controls for the active whiteboard with <kbd>{shortcut}</kbd>. This does not
+              change the opening default.
             </>
           ) : (
             "No shortcut assigned. Use the command palette or assign one in Key Bindings."

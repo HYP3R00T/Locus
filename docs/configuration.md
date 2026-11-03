@@ -41,7 +41,7 @@ identifier-based application-config directory; logs and study data also keep the
     "theme": "system",
     "lightTheme": "default-light",
     "darkTheme": "default-dark",
-    "whiteboardControlsVisible": true,
+    "whiteboardControlsVisibleByDefault": false,
     "whiteboardStrokeColor": "#1971c2",
     "whiteboardStrokeWidth": 1,
     "primaryColumn": "left",
@@ -61,6 +61,12 @@ three standard widths: `1` (thin), `2` (medium), or `4` (thick). Missing values 
 blue and thin. **Settings → Whiteboard** provides the standard color palette, a hex field, and width buttons.
 Defaults apply when opening a board, including restored boards; they do not rewrite existing marks or
 replace tool choices in an already-open editor.
+
+`whiteboardControlsVisibleByDefault` controls whether the drawing interface is shown when a board opens.
+It defaults to `false`. The checkbox changes this opening preference, while the configured shortcut
+toggles only the active board's temporary visibility, without writing preferences or affecting other boards.
+The former `whiteboardControlsVisible` live-toggle field is accepted for migration but ignored; older
+configurations start hidden until an opening preference is explicitly chosen.
 
 `primaryColumn` is `left` or `right`; `primaryRow` is `top` or `bottom`. Modifier-clicks target the
 other side; these preferences do not lock ordinary pane selection. `notificationDuration` accepts 3000,

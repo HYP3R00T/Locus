@@ -9,7 +9,7 @@ export type Appearance = {
   theme: string;
   lightTheme: string;
   darkTheme: string;
-  whiteboardControlsVisible: boolean;
+  whiteboardControlsVisibleByDefault: boolean;
   whiteboardStrokeColor: string;
   whiteboardStrokeWidth: 1 | 2 | 4;
   primaryColumn: "left" | "right";
@@ -30,7 +30,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   theme: "system",
   lightTheme: "default-light",
   darkTheme: "default-dark",
-  whiteboardControlsVisible: true,
+  whiteboardControlsVisibleByDefault: false,
   whiteboardStrokeColor: "#1971c2",
   whiteboardStrokeWidth: 1,
   primaryColumn: "left",
@@ -50,7 +50,7 @@ export function workbenchPreferences(config: Configuration, mac: boolean): Prefe
   return parsePreferences(
     JSON.stringify({
       version: 2,
-      whiteboardControlsVisible: config.preferences.whiteboardControlsVisible,
+      whiteboardControlsVisibleByDefault: config.preferences.whiteboardControlsVisibleByDefault,
       keybindings: config.keybindings.bindings,
     }),
     mac,

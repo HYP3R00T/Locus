@@ -27,7 +27,7 @@ export function CommandCenter() {
   );
 }
 export function TitlebarLayoutControls() {
-  const { info, perform, enabled, preferences } = useWorkbench();
+  const { info, perform, enabled, pressed } = useWorkbench();
   return (
     <div data-tauri-drag-region className="flex shrink-0 items-center gap-1 px-1">
       <ActionTooltip label="Open navigation" command="navigation.materials">
@@ -48,7 +48,8 @@ export function TitlebarLayoutControls() {
               variant="ghost"
               size="icon-sm"
               aria-label="Toggle canvas controls"
-              aria-pressed={preferences.whiteboardControlsVisible}
+              aria-pressed={pressed("drawing.controls")}
+              disabled={!enabled("drawing.controls")}
               onClick={() => perform("drawing.controls")}
             >
               <SlidersHorizontalIcon />

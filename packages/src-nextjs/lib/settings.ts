@@ -69,10 +69,11 @@ export function settingsCatalog(input: {
     {
       id: "canvas.controls",
       section: "canvas",
-      title: "Show Canvas Controls",
-      description: "Show drawing tools, properties, menus, zoom, and undo/redo on whiteboards.",
+      title: "Show Canvas Controls by Default",
+      description:
+        "Choose whether tools, properties, menus, zoom, and undo/redo are visible when a whiteboard opens. The shortcut only changes the active board for the current session.",
       keywords: ["whiteboard", "Excalidraw", "drawing", "pen", "interface"],
-      modified: !input.controlsVisible,
+      modified: input.controlsVisible,
     },
     {
       id: "canvas.strokeColor",
