@@ -355,7 +355,7 @@ export function PdfReader({
     zoomPreset ?? (matchingPreset === undefined ? "custom" : String(matchingPreset));
   return (
     <section aria-label={`PDF reader: ${document.title}`} className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b px-1 text-xs">
+      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b bg-toolbar-background px-1 text-xs text-toolbar-foreground">
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {

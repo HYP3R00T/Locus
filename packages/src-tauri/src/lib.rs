@@ -1,12 +1,100 @@
+mod configuration;
 mod library;
 
 use library::{Action, Library, PdfInfo, Snapshot};
 use std::sync::Arc;
 use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::StateFlags;
 
 type Store = Arc<Library>;
+type Config = Arc<configuration::Configuration>;
+
+#[tauri::command]
+async fn load_configuration(
+    config: State<'_, Config>,
+    legacy: Option<configuration::LegacyConfiguration>,
+    migration_error: Option<String>,
+) -> Result<configuration::ConfigurationSnapshot, String> {
+    let config = config.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if !config.exists()
+            && let Some(reason) = migration_error
+        {
+            return Err(format!("Could not migrate browser preferences: {reason}"));
+        }
+        config.load(legacy)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .inspect_err(|_| log::warn!("Could not load configuration"))
+}
+
+#[tauri::command]
+async fn read_themes(config: State<'_, Config>) -> Result<configuration::ThemeSnapshot, String> {
+    let config = config.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || config.read_themes())
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn save_configuration(
+    config: State<'_, Config>,
+    file: String,
+    expected: serde_json::Value,
+    value: serde_json::Value,
+) -> Result<(), String> {
+    let config = config.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || config.save(&file, expected, value))
+        .await
+        .map_err(|e| e.to_string())?
+        .inspect_err(|_| log::warn!("Could not save configuration"))
+}
+
+#[tauri::command]
+async fn import_theme(
+    app: tauri::AppHandle,
+    config: State<'_, Config>,
+) -> Result<Option<configuration::ConfigurationSnapshot>, String> {
+    let config = config.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app
+            .dialog()
+            .file()
+            .add_filter("Locus theme", &["json"])
+            .blocking_pick_file()
+        else {
+            return Ok(None);
+        };
+        config.import_theme(&file.into_path().map_err(|e| e.to_string())?)?;
+        config.load(None).map(Some)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .inspect_err(|_| log::warn!("Could not import theme"))
+}
+
+#[tauri::command]
+async fn open_configuration_directory(
+    app: tauri::AppHandle,
+    config: State<'_, Config>,
+) -> Result<(), String> {
+    let config = config.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        std::fs::create_dir_all(config.directory()).map_err(|e| e.to_string())?;
+        app.opener()
+            .open_path(
+                config.directory().to_string_lossy().into_owned(),
+                None::<&str>,
+            )
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .inspect_err(|_| log::warn!("Could not open configuration directory"))
+}
 
 fn window_state_flags() -> StateFlags {
     let flags = StateFlags::SIZE | StateFlags::MAXIMIZED;
@@ -131,6 +219,9 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            app.manage(Arc::new(configuration::Configuration::new(
+                app.path().config_dir()?.join("locus"),
+            )));
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
             let library = Library::open(&directory.join("library.sqlite"))
@@ -141,6 +232,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            load_configuration,
+            read_themes,
+            save_configuration,
+            import_theme,
+            open_configuration_directory,
             library_action,
             attach_pdf,
             pdf_info,
