@@ -13,6 +13,7 @@
 | Cross-unit ownership and contracts           | [Architecture](architecture.md)                                                    |
 | Package internals and local checks           | [Package guides](index.md#package-map)                                             |
 | Persistence details and workbench behavior   | [Storage](storage.md), [workbench](workbench.md)                                   |
+| Configuration files and theme format         | [Configuration](configuration.md)                                                  |
 | Versioning and Debian packaging              | [Releasing](releasing.md)                                                          |
 | Significant tradeoffs and approvals          | [Decision records](decisions/index.md)                                             |
 | Exact versions, interfaces, and task bodies  | Source, migrations, manifests, configuration, and tests                            |

@@ -23,6 +23,7 @@ flowchart LR
   Rust -->|Registered byte-range reads| PDF[Referenced PDFs]
   Rust --> DB[SQLite metadata]
   Rust --> Scenes[Excalidraw files]
+  Rust --> Config[Configuration JSON and theme files]
   Change[Root changelog] --> Site[Independent Astro site]
 ```
 
@@ -55,8 +56,9 @@ Rust owns library persistence and native file validation. Names and file paths a
 stable IDs identify records. Removing references does not delete original PDFs or authored drawing files.
 [Storage](storage.md) owns the detailed schema, file layout, migrations, and removal semantics.
 
-The frontend owns session pane layout, command registration, save queues, and browser-stored preferences.
-[Workbench](workbench.md) owns preference migration, command scopes, and pane behavior. One live editor per
+The frontend owns session pane layout, command registration, save queues, and theme application. Rust owns
+versioned preference/key-binding files and validated theme imports; [Configuration](configuration.md) owns
+paths, migration, and recovery. [Workbench](workbench.md) owns command scopes and pane behavior. One live editor per
 whiteboard avoids competing writes inside the application. Concurrent external editing is not coordinated.
 
 ## Unresolved and unimplemented areas

@@ -8,6 +8,14 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Browse shortcuts in a compact table showing commands, bindings, activation contexts, and default/custom sources; double-click to edit.
+- Customize individual interface color tokens with complete, copyable light/dark theme files; missing colors inherit defaults.
+- Add or edit a theme JSON in the configuration folder and see it appear automatically while Locus is open.
+- Choose themes from a compact command-palette picker, starting on your current theme with live previews as you browse. Enter saves; Escape restores the saved theme.
+- Search settings across grouped Workbench and Application categories, with Commonly Used and Modified views.
+- Keep preferences and key bindings in portable configuration files, migrating existing settings without replacing native files.
+- Choose grouped light/dark palettes, import custom theme JSON, and reload or open the configuration folder from Settings.
+- Include Default Light/Dark, Catppuccin Mocha, Nord, Dracula, and Tokyo Night interface palettes.
 - Show action hints and current keyboard shortcuts in tooltips on navigation, title-bar, and PDF controls.
 - Restore the main window's size and maximized state between sessions, with position restoration where supported.
 - Keep bounded local diagnostic logs for startup and native operation failures without recording study content.
@@ -24,6 +32,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Expand unchanged older bundled theme files so title bars and study panes receive the selected palette instead of default-dark fallback colors.
 - Keep equal spacing around the workspace containers, including the left navigation edge.
 - Include the developer's name, license, project links, and application details in Debian packaging metadata.
 - Correct PDF page sizing to keep text sharp instead of shrinking the rendered page.

@@ -7,6 +7,7 @@ missing-file relinking, and persistent Excalidraw whiteboards. PDF pins, Markdow
 
 Rust stores `library.sqlite` in Tauri's platform-specific application-data directory
 (`$XDG_DATA_HOME/dev.hyperoot.locus` on Linux, normally `~/.local/share/dev.hyperoot.locus`).
+Preferences, key bindings, and interface themes live separately in the [configuration directory](configuration.md).
 PDFs remain at their original locations. The application never copies, edits, renames, or deletes them.
 The desktop file picker is the only attachment/relink entry point; the reader requests registered document IDs,
 not arbitrary paths. Browser development is a layout-only preview: library actions are disabled, with no
