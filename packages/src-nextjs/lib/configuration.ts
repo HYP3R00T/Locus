@@ -3,7 +3,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 export { BUILTIN_THEMES, type Theme } from "@/lib/themes";
 
 import type { Theme } from "@/lib/themes";
-import { COMMANDS, type Preferences, parsePreferences } from "@/lib/workbench";
+import { COMMANDS, type Preferences, parsePreferences, type ShortcutSort } from "@/lib/workbench";
 export type Appearance = {
   version: 1;
   theme: string;
@@ -13,6 +13,7 @@ export type Appearance = {
   primaryColumn: "left" | "right";
   primaryRow: "top" | "bottom";
   notificationDuration: number;
+  shortcutSort: { column: ShortcutSort; direction: "asc" | "desc" };
 };
 export type Keybindings = { version: 1; bindings: Preferences["keybindings"] };
 export type Configuration = {
@@ -31,6 +32,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   primaryColumn: "left",
   primaryRow: "top",
   notificationDuration: 3000,
+  shortcutSort: { column: "binding", direction: "asc" },
 };
 export function workbenchPreferences(config: Configuration, mac: boolean): Preferences {
   if (

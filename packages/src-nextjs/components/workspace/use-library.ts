@@ -26,6 +26,7 @@ export function useLibrary() {
   const { appearance } = useConfiguration();
   const [library, setLibrary] = useState<Library>(emptyLibrary);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [folderSelections, setFolderSelections] = useState<Record<string, string | null>>({});
   const [layout, dispatchLayout] = useReducer(studyLayoutReducer, undefined, createStudyLayout);
   const activeId = useRef(layout.activeId);
   useEffect(() => {
@@ -38,6 +39,11 @@ export function useLibrary() {
     dispatchLayout({ type: "reset" });
   }
   function select(documentId: string, target: MaterialOpenTarget = "active") {
+    chooseFolder(
+      library.documents.find(
+        (document) => document.id === documentId && document.workspaceId === workspaceId,
+      )?.folderId ?? null,
+    );
     openMaterial({ kind: "pdf", id: documentId }, target);
   }
   const [ready, setReady] = useState(false);
@@ -87,6 +93,11 @@ export function useLibrary() {
           (w) => !library.workspaces.some((old) => old.id === w.id),
         );
         if (added) chooseWorkspace(added.id);
+      } else if (action.type === "createFolder") {
+        const added = data.folders.find(
+          (folder) => !library.folders.some((old) => old.id === folder.id),
+        );
+        if (added) chooseFolder(added.id);
       } else if (!data.workspaces.some((w) => w.id === workspaceId)) {
         setWorkspaceId(data.workspaces[0]?.id ?? null);
         resetLayout();
@@ -113,7 +124,10 @@ export function useLibrary() {
         const added = data.documents.find(
           (d) => d.workspaceId === workspaceId && !before.includes(d.id),
         );
-        if (added) select(added.id);
+        if (added) {
+          chooseFolder(added.folderId);
+          openMaterial({ kind: "pdf", id: added.id }, "active");
+        }
         if (relinkId) setRevision((r) => r + 1);
       }
     } catch (e) {
@@ -140,6 +154,25 @@ export function useLibrary() {
     }).then(() => {});
   }, []);
   const workspace = library.workspaces.find((w) => w.id === workspaceId) ?? null;
+  const selectedFolderId =
+    workspaceId && Object.hasOwn(folderSelections, workspaceId)
+      ? folderSelections[workspaceId]
+      : library.navigation.find((item) => item.workspaceId === workspaceId)?.folderId;
+  const activeFolder =
+    library.folders.find(
+      (folder) => folder.id === selectedFolderId && folder.workspaceId === workspaceId,
+    ) ?? null;
+  function chooseFolder(folderId: string | null) {
+    if (!workspaceId || folderId === (activeFolder?.id ?? null)) return;
+    const previous = activeFolder?.id ?? null;
+    setFolderSelections((old) => ({ ...old, [workspaceId]: folderId }));
+    void libraryAction({ type: "selectFolder", workspaceId, folderId }).catch((reason) => {
+      setError(String(reason));
+      setFolderSelections((old) =>
+        old[workspaceId] === folderId ? { ...old, [workspaceId]: previous } : old,
+      );
+    });
+  }
   const activePane = activeStudyPane(layout);
   const selected =
     library.documents.find(
@@ -167,6 +200,16 @@ export function useLibrary() {
       void savePosition(document, position.pageIndex, position.y).catch((e) => setError(String(e)));
   }
   function activatePane(paneId: string) {
+    const pane = layout.columns
+      .flatMap((column) => column.panes)
+      .find((item) => item.id === paneId);
+    if (pane?.content?.kind === "pdf")
+      chooseFolder(
+        library.documents.find(
+          (document) => document.id === pane.content?.id && document.workspaceId === workspaceId,
+        )?.folderId ?? null,
+      );
+    else if (pane?.content?.kind === "drawing") chooseFolder(null);
     if (activeId.current === paneId) return;
     persistPanePosition(activeId.current);
     activeId.current = paneId;
@@ -208,6 +251,7 @@ export function useLibrary() {
     dispatchLayout(action);
   }
   function openDrawing(id: string, target: MaterialOpenTarget = "active") {
+    chooseFolder(null);
     openMaterial({ kind: "drawing", id }, target);
   }
   async function createDrawing() {
@@ -279,6 +323,8 @@ export function useLibrary() {
   return {
     library,
     workspace,
+    activeFolder,
+    chooseFolder,
     selected,
     selectedDrawing:
       library.drawings.find(

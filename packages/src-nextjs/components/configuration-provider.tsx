@@ -32,7 +32,9 @@ type ConfigurationContextValue = {
   error: string | null;
   updatePreferences: (value: Preferences) => Promise<void>;
   updateAppearance: (
-    value: Partial<Pick<Appearance, "primaryColumn" | "primaryRow" | "notificationDuration">>,
+    value: Partial<
+      Pick<Appearance, "primaryColumn" | "primaryRow" | "notificationDuration" | "shortcutSort">
+    >,
   ) => Promise<boolean>;
   selectTheme: (id: string) => Promise<boolean>;
   previewTheme: (id: string | null) => void;

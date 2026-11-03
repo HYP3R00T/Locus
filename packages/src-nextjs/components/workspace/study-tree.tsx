@@ -1,6 +1,6 @@
 "use client";
 import { BookOpenIcon, ChevronRightIcon, FolderIcon, PenLineIcon } from "lucide-react";
-import { type DragEvent, type ReactNode, useState } from "react";
+import { type DragEvent, type ReactNode, useEffect, useState } from "react";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -27,6 +27,8 @@ export function StudyTree({
   library,
   workspace,
   selectedId,
+  activeFolderId,
+  onFolderSelect,
   disabled,
   onSelect,
   onAddPdf,
@@ -40,16 +42,24 @@ export function StudyTree({
   library: Library;
   workspace: Workspace | null;
   selectedId?: string;
+  activeFolderId: string | null;
+  onFolderSelect: (id: string | null) => void;
   disabled: boolean;
   onSelect: (item: StudyDocument, target?: MaterialOpenTarget) => void;
   onAddPdf: (folderId: string | null) => void;
   onAddDrawing: () => void;
   onSelectDrawing: (id: string, target?: MaterialOpenTarget) => void;
-  onAddFolder: () => void;
+  onAddFolder: (parentId: string | null) => void;
   onRemove: (item: Removal) => void;
   onRename: (item: Removal) => void;
   onMove: (documentId: string, folderId: string | null) => void;
 }) {
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const parentId = library.folders.find((folder) => folder.id === activeFolderId)?.parentId;
+    if (parentId)
+      setExpandedFolders((old) => (old[parentId] === false ? { ...old, [parentId]: true } : old));
+  }, [activeFolderId, library.folders]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   if (!workspace)
@@ -138,7 +148,9 @@ export function StudyTree({
                 disabled={document.folderId === f.id}
                 onClick={() => onMove(document.id, f.id)}
               >
-                {f.title}
+                {[folders.find((parent) => parent.id === f.parentId)?.title, f.title]
+                  .filter(Boolean)
+                  .join(" / ")}
               </ContextMenuItem>
             ))}
           </ContextMenuSubContent>
@@ -165,13 +177,22 @@ export function StudyTree({
           dropTarget === folder.id && "bg-sidebar-accent ring-1 ring-inset ring-ring",
         )}
       >
-        <Collapsible defaultOpen>
+        <Collapsible
+          open={expandedFolders[folder.id] ?? true}
+          onOpenChange={(open) => setExpandedFolders((old) => ({ ...old, [folder.id]: open }))}
+        >
           {menu(
             <CollapsibleTrigger
               render={
                 <NavigationAction
                   aria-haspopup="menu"
-                  className="min-w-0 gap-2 px-2 [&_svg:first-child]:size-3 [&[aria-expanded=true]>svg:first-child]:rotate-90"
+                  aria-current={activeFolderId === folder.id ? "true" : undefined}
+                  onClick={() => onFolderSelect(folder.id)}
+                  onContextMenu={() => onFolderSelect(folder.id)}
+                  className={cn(
+                    "min-w-0 gap-2 px-2 [&_svg:first-child]:size-3 [&[aria-expanded=true]>svg:first-child]:rotate-90",
+                    activeFolderId === folder.id && "bg-sidebar-accent",
+                  )}
                 />
               }
             >
@@ -182,6 +203,12 @@ export function StudyTree({
               </span>
             </CollapsibleTrigger>,
             <>
+              <ContextMenuItem
+                disabled={disabled || !!folder.parentId}
+                onClick={() => onAddFolder(folder.id)}
+              >
+                Create subfolder
+              </ContextMenuItem>
               <ContextMenuItem disabled={disabled} onClick={() => onAddPdf(folder.id)}>
                 Add PDF
               </ContextMenuItem>
@@ -200,6 +227,13 @@ export function StudyTree({
           )}
           <CollapsibleContent>
             <ul className="tree-children">
+              {folders
+                .filter((child) => child.parentId === folder.id)
+                .map((child) => (
+                  <li key={child.id} className="tree-branch">
+                    {folderRow(child)}
+                  </li>
+                ))}
               {documents
                 .filter((d) => d.folderId === folder.id)
                 .map((d) => (
@@ -227,7 +261,15 @@ export function StudyTree({
           />
         }
       >
-        {folders.map(folderRow)}
+        <NavigationAction
+          aria-current={!activeFolderId ? "true" : undefined}
+          onClick={() => onFolderSelect(null)}
+          className={cn("mb-2 gap-2 px-2 font-medium", !activeFolderId && "bg-sidebar-accent")}
+        >
+          <FolderIcon />
+          <span className="truncate">{workspace.title}</span>
+        </NavigationAction>
+        {folders.filter((folder) => !folder.parentId).map(folderRow)}
         {documents
           .filter((d) => !d.folderId)
           .map((d) => (
@@ -301,7 +343,7 @@ export function StudyTree({
         <ContextMenuItem disabled={disabled} onClick={onAddDrawing}>
           New whiteboard
         </ContextMenuItem>
-        <ContextMenuItem disabled={disabled} onClick={onAddFolder}>
+        <ContextMenuItem disabled={disabled} onClick={() => onAddFolder(null)}>
           Create folder
         </ContextMenuItem>
       </ContextMenuContent>

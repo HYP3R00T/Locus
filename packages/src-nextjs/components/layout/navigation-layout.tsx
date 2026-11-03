@@ -33,6 +33,10 @@ function isServerMobileViewport() {
   return false;
 }
 
+export function useMobileNavigation() {
+  return useSyncExternalStore(subscribeToViewport, isMobileViewport, isServerMobileViewport);
+}
+
 export function NavigationLayout({
   primaryExpanded,
   contextExpanded,
@@ -46,11 +50,7 @@ export function NavigationLayout({
   contextNavigation: ReactNode;
   children: ReactNode;
 }) {
-  const mobile = useSyncExternalStore(
-    subscribeToViewport,
-    isMobileViewport,
-    isServerMobileViewport,
-  );
+  const mobile = useMobileNavigation();
   const primary = useRef<PanelImperativeHandle | null>(null);
   const context = useRef<PanelImperativeHandle | null>(null);
   const primaryGroup = useRef<HTMLDivElement | null>(null);

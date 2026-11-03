@@ -20,16 +20,17 @@ backup facilities; copying an active WAL database file alone is insufficient.
 
 ## Current schema
 
-The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 3).
+The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 5).
 
-| Table                 | Responsibility                                                                                                              |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `workspaces`          | UUID and display title                                                                                                      |
-| `folders`             | UUID, workspace, and display title; no nested parent                                                                        |
-| `documents`           | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
-| `workspace_documents` | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
-| `drawings`            | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                     |
-| `reading_positions`   | Zero-based physical page index, page-relative vertical fraction, and offset format version for each workspace/document pair |
+| Table                  | Responsibility                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `workspaces`           | UUID and display title                                                                                                      |
+| `folders`              | UUID, workspace, title, and optional parent; one subfolder level                                                            |
+| `documents`            | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
+| `workspace_documents`  | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
+| `workspace_navigation` | Per-workspace active folder, restored after reopening; deleting the folder resets it to the workspace root                  |
+| `drawings`             | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                     |
+| `reading_positions`    | Zero-based physical page index, page-relative vertical fraction, and offset format version for each workspace/document pair |
 
 Titles and file paths are not identities. Attaching the same canonical path reuses its document record;
 attaching it again within one workspace updates its folder placement. The same PDF can be referenced in
@@ -39,11 +40,11 @@ IDs even when their contents match.
 ## Display names and placement
 
 Right-click PDFs to open, rename, move, add another PDF, or remove their workspace reference. Folder context menus
-provide attachment, rename, and removal; workspace context menus provide rename and removal. Empty tree space
+provide attachment, subfolder creation (top-level folders only), rename, and removal; workspace context menus provide rename and removal. Empty tree space
 provides PDF attachment and folder creation. Touch long-press and the keyboard context-menu key use the same menus.
 PDF rows use a grab cursor, a drag preview, and highlighted drop targets. Drop onto a folder to move into it,
 or onto empty tree space to move to the workspace root. The **Move to** submenu provides the same operation
-without dragging. Arbitrary sibling reordering and nested folders are not supported; rows remain title-sorted.
+without dragging. Rows remain title-sorted. Folders support a top-level folder and one subfolder level; deeper nesting and folder reparenting are not exposed.
 
 PDF display names are workspace-specific overrides. Renaming and moving retain the document ID, original path,
 reading state, and file contents. No filesystem rename or move takes place. Schema migration 2 adds these aliases
@@ -97,3 +98,19 @@ Drawing tests cover persistence, rename, validation, and preserving files after 
 Frontend checks cover lint/types. Pane limits, mixed-content swaps, and drag-to-split behavior require focused
 behavior verification; no separate frontend behavior-test command is configured. Manually exercise the native picker and rendering with representative
 books on each target OS; a browser preview does not prove the platform's WebView or native dialog behavior.
+
+## Navigation selection and subfolders
+
+The sidebar names the current workspace and highlights the active creation folder. Clicking the workspace-root
+row selects the root; selecting a folder or PDF updates the folder target. Pane focus follows a PDF's folder;
+whiteboards use the workspace root. New Folder uses this target, and its dialog shows the captured destination.
+The folder command is unavailable inside a subfolder because two folder levels is the current limit.
+Selection is stored in SQLite per workspace, independent of the open-pane layout. Active ancestors expand
+when needed so the selected folder is visible. Add PDF uses the same selected destination.
+
+Migration 4 adds nullable `folders.parent_id`; migration 5 adds `workspace_navigation`. Each migration is transactional. Existing folders remain
+at the root. SQL triggers reject cross-workspace parents, deeper nesting, and invalid active-folder targets.
+Deleting a parent promotes its child folders to the workspace root and keeps PDFs in those child folders;
+PDFs directly in the removed folder move to the root. Deleting the active folder clears that workspace's
+navigation selection. Original files and authored drawings are preserved. Older app binaries refuse schema 5;
+back up the library before upgrading if rollback to an older app is needed.

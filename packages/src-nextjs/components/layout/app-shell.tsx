@@ -4,13 +4,12 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FolderIcon,
-  PaletteIcon,
   PlusIcon,
   Settings2Icon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavigationAction } from "@/components/layout/navigation-action";
-import { NavigationLayout } from "@/components/layout/navigation-layout";
+import { NavigationLayout, useMobileNavigation } from "@/components/layout/navigation-layout";
 import {
   type PreferenceSection,
   PreferencesSettings,
@@ -57,8 +56,12 @@ export function AppShell() {
   const [settingsQuery, setSettingsQuery] = useState("");
   const [navigationExpanded, setNavigationExpanded] = useState(false);
   const [contextExpanded, setContextExpanded] = useState(true);
+  const contextVisible = view === "settings" || contextExpanded;
+  const mobileNavigation = useMobileNavigation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [create, setCreate] = useState<"workspace" | "folder" | null>(null);
+  const [createParentId, setCreateParentId] = useState<string | null>(null);
+  const [createWorkspaceId, setCreateWorkspaceId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [rename, setRename] = useState<Removal | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
@@ -94,12 +97,12 @@ export function AppShell() {
       run: () => openCreate("workspace"),
     },
     "folder.new": {
-      enabled: data.native && !!data.workspace && !data.busy,
+      enabled: data.native && !!data.workspace && !data.busy && !data.activeFolder?.parentId,
       run: () => openCreate("folder"),
     },
     "pdf.add": {
       enabled: data.native && !!data.workspace && !data.busy,
-      run: () => data.addPdf(data.selected?.folderId ?? null),
+      run: () => data.addPdf(data.activeFolder?.id ?? null),
     },
     "whiteboard.new": {
       enabled: data.native && !!data.workspace && !data.busy,
@@ -153,6 +156,7 @@ export function AppShell() {
     },
     "navigation.primary": { run: () => setNavigationExpanded((value) => !value) },
     "navigation.materials": {
+      enabled: view === "workspace" || mobileNavigation,
       run: () =>
         window.matchMedia("(max-width: 767px)").matches
           ? setMobileOpen((value) => !value)
@@ -221,7 +225,12 @@ export function AppShell() {
       })),
     });
   }, [data.layout, data.library.documents, data.library.drawings, view, workbench.setInfo]);
-  function openCreate(kind: "workspace" | "folder") {
+  function openCreate(
+    kind: "workspace" | "folder",
+    parentId: string | null = data.activeFolder?.id ?? null,
+  ) {
+    setCreateParentId(parentId);
+    setCreateWorkspaceId(data.workspace?.id ?? null);
     setTitle("");
     setCreate(kind);
   }
@@ -245,6 +254,8 @@ export function AppShell() {
       library={data.library}
       workspace={data.workspace}
       selectedId={data.selected?.id ?? data.selectedDrawing?.id}
+      activeFolderId={data.activeFolder?.id ?? null}
+      onFolderSelect={data.chooseFolder}
       disabled={data.busy || !data.ready || !data.native}
       onSelect={(item, target) => {
         data.select(item.id, target);
@@ -254,7 +265,7 @@ export function AppShell() {
       onAddPdf={(folder) => {
         void data.addPdf(folder);
       }}
-      onAddFolder={() => openCreate("folder")}
+      onAddFolder={(parentId) => openCreate("folder", parentId)}
       onAddDrawing={() => {
         void data.createDrawing();
       }}
@@ -294,7 +305,9 @@ export function AppShell() {
             aria-pressed={view === "workspace" && workspace.id === data.workspace?.id}
             className={cn(
               !compact && "min-w-0 flex-1",
-              view === "workspace" && workspace.id === data.workspace?.id && "bg-sidebar-accent",
+              view === "workspace" &&
+                workspace.id === data.workspace?.id &&
+                "bg-sidebar-accent ring-1 ring-inset ring-sidebar-ring/50",
             )}
             onClick={() => chooseWorkspace(workspace.id)}
           >
@@ -332,7 +345,7 @@ export function AppShell() {
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       <NavigationLayout
         primaryExpanded={navigationExpanded}
-        contextExpanded={contextExpanded}
+        contextExpanded={contextVisible}
         primaryNavigation={
           <aside
             aria-label="Primary navigation"
@@ -394,45 +407,46 @@ export function AppShell() {
         contextNavigation={
           <aside
             id="context-navigation"
-            aria-label="Workspace navigation"
+            aria-label={view === "settings" ? "Settings navigation" : "Workspace navigation"}
             className="flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden bg-context-surface py-2"
           >
             <div className="flex h-9 shrink-0 items-center">
-              <div className="flex w-[55px] shrink-0 justify-center">
-                <NavigationAction
-                  compact
-                  aria-label={contextLabel}
-                  title={contextLabel}
-                  command="navigation.materials"
-                  aria-expanded={contextExpanded}
-                  aria-controls="context-navigation"
-                  onClick={() => setContextExpanded(!contextExpanded)}
-                >
-                  {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                </NavigationAction>
-              </div>
-              {contextExpanded && view === "settings" && (
-                <h2 className="truncate text-xs font-medium">Settings</h2>
+              {view === "settings" ? (
+                <h2 className="truncate px-5 text-xs font-medium">Settings</h2>
+              ) : (
+                <div className="flex w-[55px] shrink-0 justify-center">
+                  <NavigationAction
+                    compact
+                    aria-label={contextLabel}
+                    title={contextLabel}
+                    command="navigation.materials"
+                    aria-expanded={contextExpanded}
+                    aria-controls="context-navigation"
+                    onClick={() => setContextExpanded(!contextExpanded)}
+                  >
+                    {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                  </NavigationAction>
+                </div>
               )}
             </div>
             <div
               className={cn(
                 "min-h-0 flex-1 overflow-x-hidden overflow-y-auto",
-                !contextExpanded && "hidden",
+                !contextVisible && "hidden",
               )}
             >
               {view === "workspace" ? tree : settingsNavigation}
             </div>
-            {!contextExpanded && (
+            {!contextVisible && (
               <nav aria-label="Compact workspace navigation" className="px-2">
                 <NavigationAction
                   compact
-                  aria-label={view === "settings" ? "Show preferences" : "Show materials"}
-                  title={view === "settings" ? "Preferences" : "Materials"}
+                  aria-label="Show materials"
+                  title="Materials"
                   command="navigation.materials"
                   onClick={() => setContextExpanded(true)}
                 >
-                  {view === "settings" ? <PaletteIcon /> : <FolderIcon />}
+                  <FolderIcon />
                 </NavigationAction>
               </nav>
             )}
@@ -505,19 +519,48 @@ export function AppShell() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{create === "folder" ? "Create folder" : "Create workspace"}</DialogTitle>
+            <DialogTitle>
+              {create === "folder"
+                ? createParentId
+                  ? "Create subfolder"
+                  : "Create folder"
+                : "Create workspace"}
+            </DialogTitle>
             <DialogDescription>
               {create === "folder"
-                ? "Group books within this workspace. Folders have no subfolders."
+                ? `Create in: ${[
+                    data.library.workspaces.find((workspace) => workspace.id === createWorkspaceId)
+                      ?.title,
+                    ...(() => {
+                      const parent = data.library.folders.find(
+                        (folder) => folder.id === createParentId,
+                      );
+                      return parent
+                        ? [
+                            data.library.folders.find((folder) => folder.id === parent.parentId)
+                              ?.title,
+                            parent.title,
+                          ]
+                        : [];
+                    })(),
+                  ]
+                    .filter(Boolean)
+                    .join(" / ")}`
                 : "Organize books around a subject or project."}
             </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              if (create === "folder" && !createWorkspaceId) return;
               const ok = await data.mutate(
-                create === "folder" && data.workspace
-                  ? { type: "createFolder", workspaceId: data.workspace.id, title: title.trim() }
+                create === "folder" && createWorkspaceId
+                  ? {
+                      type: "createFolder",
+                      workspaceId: createWorkspaceId,
+                      parentId: createParentId,
+                      title: title.trim(),
+                    }
                   : { type: "createWorkspace", title: title.trim() },
               );
               if (ok) setCreate(null);
@@ -622,7 +665,7 @@ export function AppShell() {
             <DialogTitle>Remove {removal?.title}?</DialogTitle>
             <DialogDescription>
               {removal?.kind === "folder"
-                ? "Books in this folder will remain at the workspace root."
+                ? "Books in this folder and its subfolders will remain in the workspace. Child folders move to the workspace root."
                 : removal?.kind === "workspace"
                   ? "This removes the workspace and its material references and reading positions. Whiteboard files are kept on disk."
                   : removal?.kind === "drawing"
