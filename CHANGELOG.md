@@ -8,6 +8,9 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Record local millisecond startup timings for restoration, lazy imports, pane painting, and final reveal.
+- Prepare the first and saved PDF pages concurrently when restoring a reading session.
+- Avoid unnecessary whiteboard updates during session restoration and defer the settings editor until opened.
 - Show one workspace-wide startup loading screen until restored content is ready, then fade into the study space.
 - Resume each workspace's open PDFs and whiteboards, split proportions, active pane, PDF positions, and expanded folder branch after restarting.
 - Edit a workspace's name, scientific or academic icon, and theme-aware or custom color together through the workspace context menu.

@@ -12,6 +12,7 @@ import {
   type StudyDocument,
 } from "@/lib/library";
 import { flushSessions, registerSessionWriter, restoreSession } from "@/lib/sessions";
+import { markStartup } from "@/lib/startup-timing";
 import {
   activeStudyPane,
   createStudyLayout,
@@ -123,6 +124,7 @@ export function useLibrary() {
       .then((data) => {
         if (!alive) return;
         setLibrary(data);
+        markStartup("library_ready");
         setNative(desktop());
         const saved = localStorage.getItem("locus-workspace");
         for (const session of data.sessions)

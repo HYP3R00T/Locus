@@ -56,3 +56,11 @@ category pages and filtered results. Navigation is a flat list of implemented se
 
 Use the shared `components/ui/checkbox` for standalone checkbox controls. Menu checkbox items keep their
 existing Base UI menu primitives so menu keyboard behavior is preserved.
+
+`lib/startup-timing.ts` emits bounded, deduplicated startup markers through a native command. The startup loading
+layer records final readiness and reveal; PDF/whiteboard components record lazy imports, parsing, and painting.
+Only fixed phases, elapsed milliseconds, anonymous pane slots, and a random navigation ID cross this bridge.
+Diagnostics are fire-and-forget, never block startup, stop after reveal, and do nothing in the browser preview.
+Navigation response start/end and DOM-interactive timestamps distinguish document delivery from frontend mounting.
+The collector survives Fast Refresh and stops after reveal. Compare actual launches, not hot reloads;
+keep cold development-route compilation separate from warm launches. Detailed investigation probes have been removed.

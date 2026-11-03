@@ -10,6 +10,7 @@ import {
   DEFAULT_APPEARANCE,
   workbenchPreferences,
 } from "@/lib/configuration";
+import { markStartup } from "@/lib/startup-timing";
 import { resolveThemeColors } from "@/lib/themes";
 import {
   COMMANDS,
@@ -109,6 +110,7 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
       setSnapshot(null);
       setError(String(reason));
     } finally {
+      markStartup("configuration_ready");
       setReady(true);
       saving.current = false;
       setBusy(false);
@@ -191,6 +193,7 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
     const variables = resolveThemeColors(resolved);
     for (const [key, value] of Object.entries(variables)) root.style.setProperty(`--${key}`, value);
     root.dataset.locusTheme = resolved.id;
+    markStartup("configuration_applied");
     applied.current = Object.keys(variables);
   }, [ready, snapshot, resolved, setTheme]);
 

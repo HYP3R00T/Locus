@@ -12,6 +12,7 @@ See [Configuration](../configuration.md) for paths, schemas, migration, and reco
 | Area                                                       | Responsibility                                                      |
 | ---------------------------------------------------------- | ------------------------------------------------------------------- |
 | [Main](../../packages/src-tauri/src/main.rs)               | Platform startup and Linux rendering workaround                     |
+| [Startup](../../packages/src-tauri/src/startup.rs)         | Validated, bounded startup timing                                   |
 | [Library entry](../../packages/src-tauri/src/lib.rs)       | Tauri setup, command handlers, plugin initialization                |
 | [Persistence](../../packages/src-tauri/src/library.rs)     | SQLite access, validation, PDF ranges, relinking, drawing IO, tests |
 | [Migrations](../../packages/src-tauri/migrations/)         | Numbered schema changes                                             |
@@ -52,6 +53,20 @@ Only the native command module's Info/Warn/Error records are accepted. Records c
 generic operation failures, without study contents, document IDs, file paths, or raw error messages. Frontend
 console output and dependency logs are not forwarded. Nothing is uploaded. No new frontend plugin permissions
 or JavaScript packages are needed for these Rust-managed integrations. Errors still reach the existing UI.
+
+Startup diagnostics use the validated `startup_mark` command rather than forwarding console output. Each WebView
+navigation gets a random boot ID. Fixed phase names, anonymous pane slots 0–3, and numeric millisecond values
+record configuration, library restoration, lazy imports, document parsing, first painting, readiness, and reveal.
+`webview_ms` measures from the WebView navigation's performance time origin; `native_ms` measures from entry into
+the Rust application builder to receipt of that marker, including IPC/queue time. Native initialization logs its own
+elapsed value. Clock resolution is platform-dependent; these are diagnostic timings, not a benchmark guarantee.
+
+On Linux, inspect `startup boot=` lines in `~/.local/share/dev.hyperoot.locus/logs/Locus.log`. Group by boot ID and
+compare `ContentReady` and `RevealComplete`; the latter includes the 200ms fade (unless reduced motion is enabled).
+`PaneReady` timestamps capture each pane's final readiness even though those lines are submitted when all panes
+settle. `LoadingSlow` and `Bypassed` distinguish a slow or manually bypassed startup from a fully restored one.
+Compare cold and warm launches separately. Development-server compilation/module evaluation can contribute to
+WebView navigation and import time; installed-build performance needs its own measured run.
 
 Verify manually by resizing and maximizing the window, closing normally, and reopening; check that the log
 contains a startup record. Check placement on X11/Windows separately. Compilation does not establish desktop

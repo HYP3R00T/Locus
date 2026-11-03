@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { markStartup, markStartupNavigation } from "@/lib/startup-timing";
 import { cn } from "@/lib/utils";
 
 const ReadyContext = createContext<(paneId: string, ready?: boolean) => boolean>(() => false);
@@ -35,14 +36,24 @@ export function StartupLoading({
   const expected = useRef(panes);
   const metadataReady = useRef(ready);
   const readyPanes = useRef(new Set<string>());
+  const readyTimes = useRef(new Map<string, number>());
+  useEffect(() => {
+    markStartup("frontend_mounted");
+    markStartupNavigation();
+  }, []);
   done.current = finished;
   expected.current = panes;
   metadataReady.current = ready;
   const reportReady = useCallback((paneId: string, ready = true) => {
     if (done.current || !expected.current.includes(paneId)) return false;
     if (readyPanes.current.has(paneId) === ready) return true;
-    if (ready) readyPanes.current.add(paneId);
-    else readyPanes.current.delete(paneId);
+    if (ready) {
+      readyPanes.current.add(paneId);
+      readyTimes.current.set(paneId, performance.now());
+    } else {
+      readyPanes.current.delete(paneId);
+      readyTimes.current.delete(paneId);
+    }
     setSettled(new Set(readyPanes.current));
     return true;
   }, []);
@@ -60,8 +71,13 @@ export function StartupLoading({
               !cancelled &&
               metadataReady.current &&
               expected.current.every((paneId) => readyPanes.current.has(paneId))
-            )
+            ) {
+              expected.current.forEach((paneId, slot) => {
+                markStartup("pane_ready", slot, readyTimes.current.get(paneId));
+              });
+              markStartup("content_ready");
               setFinished(true);
+            }
           });
         });
       });
@@ -74,18 +90,25 @@ export function StartupLoading({
   useEffect(() => {
     if (finished) return;
     // A slow or stalled renderer must not trap the user behind the loading layer.
-    const timer = setTimeout(() => setSlow(true), 10000);
+    const timer = setTimeout(() => {
+      markStartup("loading_slow");
+      setSlow(true);
+    }, 10000);
     return () => clearTimeout(timer);
   }, [finished]);
   useEffect(() => {
     if (!finished) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
+      markStartup("reveal_complete");
       setRevealed(true);
       return;
     }
     // Overlay scrollbars must stay suppressed through the loading layer's fade too.
-    const timer = setTimeout(() => setRevealed(true), 200);
+    const timer = setTimeout(() => {
+      markStartup("reveal_complete");
+      setRevealed(true);
+    }, 200);
     return () => clearTimeout(timer);
   }, [finished]);
   return (
@@ -120,7 +143,13 @@ export function StartupLoading({
           {slow && !finished && (
             <>
               <p className="text-xs opacity-70">Some content is taking longer to open.</p>
-              <Button variant="outline" onClick={() => setFinished(true)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  markStartup("bypassed");
+                  setFinished(true);
+                }}
+              >
                 Show workspace
               </Button>
             </>

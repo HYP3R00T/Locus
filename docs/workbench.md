@@ -25,6 +25,17 @@ release their pane's readiness gate; after ten seconds, Show workspace lets the 
 During loading, PDF containers use hidden overflow with the existing stable scrollbar gutter. Programmatic
 page restoration still works, while WebKit overlay scrollbar thumbs cannot paint above the loading layer.
 Other scrollbar thumbs are transparent until reveal. Restoring ordinary scrolling does not change the reserved gutter.
+Startup markers go to the existing native log; see [timing diagnostics](packages/native.md#window-state-and-local-diagnostics).
+PDF engine/viewer imports and metadata access begin concurrently, overlapping viewer module loading with document parsing.
+After parsing, page 1 and the saved page are requested concurrently. The saved page's geometry is installed
+before restoring the view, avoiding a sequential first-page-then-saved-page request. A separate startup marker
+records when these page prerequisites are ready; performance gains require a measured comparison.
+PDF byte-range loading keeps automatic full-document fetching disabled; startup waits for restored visible content,
+not rendering every page. Excalidraw remains dynamically imported only when a drawing pane is present.
+Excalidraw callbacks, menu children, and UI options retain their identity across wrapper/status updates.
+Its `onChange` runs after editor updates, so recreating these props can feed readiness/save-status changes
+back into unnecessary editor updates. Genuine scene changes and resizing still recheck startup readiness.
+The settings editor loads when opened rather than joining the initial study-screen module graph.
 Missing or removed materials leave empty slots. PDF zoom currently reopens in fit-to-width mode; navigation column
 widths and the selected Settings page are not part of the saved workspace session.
 

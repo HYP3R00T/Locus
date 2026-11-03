@@ -7,15 +7,13 @@ import {
   PlusIcon,
   Settings2Icon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useConfiguration } from "@/components/configuration-provider";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { NavigationLayout, useMobileNavigation } from "@/components/layout/navigation-layout";
 import { StartupLoading } from "@/components/layout/startup-loading";
-import {
-  type PreferenceSection,
-  PreferencesSettings,
-} from "@/components/settings/preferences-settings";
+import type { PreferenceSection } from "@/components/settings/preferences-settings";
 import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +50,10 @@ import { WorkspaceEditor, WorkspaceSymbol } from "@/components/workspace/workspa
 import type { Workspace } from "@/lib/library";
 import { useNotice } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
+
+const PreferencesSettings = dynamic(() =>
+  import("@/components/settings/preferences-settings").then((module) => module.PreferencesSettings),
+);
 
 export function AppShell() {
   const [appearance, setAppearance] = useState<Workspace | null>(null);
