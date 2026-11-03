@@ -1,8 +1,10 @@
 mod configuration;
 mod library;
 mod session;
+mod startup;
 
 use library::{Action, Library, PdfInfo, Snapshot};
+use startup::StartupClock;
 use std::sync::Arc;
 use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -176,6 +178,7 @@ async fn read_pdf_range(
 
 pub fn run() {
     tauri::Builder::default()
+        .manage(StartupClock::new())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -206,10 +209,15 @@ pub fn run() {
                 .inspect_err(|_| log::error!("Could not open study library"))
                 .map_err(std::io::Error::other)?;
             app.manage(Arc::new(library));
-            log::info!("Locus {} initialized", app.package_info().version);
+            log::info!(
+                "Locus {} initialized native_ms={}",
+                app.package_info().version,
+                app.state::<StartupClock>().elapsed_ms()
+            );
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            startup::startup_mark,
             load_configuration,
             read_themes,
             save_configuration,

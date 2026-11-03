@@ -18,6 +18,7 @@ import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { desktop, type StudyDocument } from "@/lib/library";
 import { useNotice } from "@/lib/notifications";
 import { wheelZoomScale } from "@/lib/pdf-interactions";
+import { markStartup } from "@/lib/startup-timing";
 
 type FitMode = "page-width" | "page-height";
 const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
@@ -29,6 +30,7 @@ export function PdfReader({
   onLocate,
   paneId,
   onReady,
+  startupSlot,
 }: {
   document: StudyDocument;
   onPosition: (document: StudyDocument, pageIndex: number, y: number) => Promise<void>;
@@ -36,9 +38,12 @@ export function PdfReader({
   onLocate: () => void;
   paneId: string;
   onReady: (ready?: boolean) => boolean;
+  startupSlot: number;
 }) {
   const readyCallback = useRef(onReady);
   readyCallback.current = onReady;
+  const timingSlot = useRef(startupSlot);
+  timingSlot.current = startupSlot;
   const [pageIndex, setPageIndex] = useState(document.pageIndex);
   const [count, setCount] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -129,6 +134,10 @@ export function PdfReader({
     let frame = 0;
     let fitTimer: ReturnType<typeof setTimeout> | undefined;
     let instance: PDFViewer | undefined;
+    function destroyDocument() {
+      void task?.destroy().catch(() => {});
+      task = undefined;
+    }
     function persist() {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
@@ -142,7 +151,28 @@ export function PdfReader({
       }, 350);
     }
     async function load() {
-      const engine = await import("pdfjs-dist");
+      markStartup("pdf_modules_started", timingSlot.current);
+      const enginePromise = import("pdfjs-dist").then((engine) => {
+        markStartup("pdf_engine_ready", timingSlot.current);
+        return engine;
+      });
+      // Start independent module/metadata work together. Catch early module rejection
+      // immediately, even though its result is consumed after document parsing.
+      const viewerPromise = import("pdfjs-dist/web/pdf_viewer.mjs").then(
+        (module) => {
+          markStartup("pdf_viewer_ready", timingSlot.current);
+          return { module };
+        },
+        (error: unknown) => ({ error }),
+      );
+      const infoPromise = invoke<{ length: number }>("pdf_info", { documentId: source.id }).then(
+        (info) => {
+          markStartup("pdf_metadata_ready", timingSlot.current);
+          return info;
+        },
+      );
+      const [engine, info] = await Promise.all([enginePromise, infoPromise]);
+      if (cancelled) return;
       const base = `/pdfjs/${engine.version}/`;
       engine.GlobalWorkerOptions.workerSrc = `${base}pdf.worker.min.mjs`;
       const options = {
@@ -154,8 +184,6 @@ export function PdfReader({
         wasmUrl: `${base}wasm/`,
         isEvalSupported: false,
       };
-      const info = await invoke<{ length: number }>("pdf_info", { documentId: source.id });
-      if (cancelled) return;
       class Ranges extends engine.PDFDataRangeTransport {
         stopped = false;
         requestDataRange(begin: number, end: number) {
@@ -174,7 +202,7 @@ export function PdfReader({
           })().catch((e) => {
             if (!cancelled) {
               setError(String(e));
-              void task?.destroy();
+              destroyDocument();
             }
           });
         }
@@ -197,10 +225,22 @@ export function PdfReader({
       };
 
       const loaded = await task.promise;
+      markStartup("pdf_document_ready", timingSlot.current);
       if (cancelled || !scroll.current || !pages.current) return;
-      const { PDFViewer, EventBus, PDFLinkService, LinkTarget, RenderingStates } = await import(
-        "pdfjs-dist/web/pdf_viewer.mjs"
-      );
+      const restoredIndex = Math.min(source.pageIndex, loaded.numPages - 1);
+      // The viewer needs page 1 for its initial geometry. Prepare the saved page
+      // concurrently so restoring a later page does not wait for that round trip.
+      const firstPagePromise = loaded.getPage(1);
+      const restoredPagePromise =
+        restoredIndex === 0 ? firstPagePromise : loaded.getPage(restoredIndex + 1);
+      const [result, , restoredPage] = await Promise.all([
+        viewerPromise,
+        firstPagePromise,
+        restoredPagePromise,
+      ]);
+      markStartup("pdf_restored_page_ready", timingSlot.current);
+      if ("error" in result) throw result.error;
+      const { PDFViewer, EventBus, PDFLinkService, LinkTarget, RenderingStates } = result.module;
       if (cancelled) return;
       const container = scroll.current;
       const eventBus = new EventBus();
@@ -258,6 +298,8 @@ export function PdfReader({
         });
       }
       eventBus.on("pagesinit", () => {
+        markStartup("pdf_viewer_initialized", timingSlot.current);
+        if (restoredIndex > 0) activeViewer.getPageView(restoredIndex)?.setPdfPage(restoredPage);
         activeViewer.currentScaleValue = "page-width";
         setCount(loaded.numPages);
         restore();
@@ -284,6 +326,8 @@ export function PdfReader({
           if (!cssTransform && !renderError) {
             const page = activeViewer.getPageView(pageNumber - 1);
             if (page) paintedScales.set(pageNumber, page.scale);
+            if (pageNumber === Math.min(source.pageIndex + 1, loaded.numPages))
+              markStartup("pdf_first_paint", timingSlot.current);
           }
           checkReady();
         },
@@ -342,7 +386,10 @@ export function PdfReader({
       resize.observe(container);
     }
     void load().catch((e) => {
-      if (!cancelled) setError(String(e));
+      if (!cancelled) {
+        setError(String(e));
+        destroyDocument();
+      }
     });
     return () => {
       cancelled = true;
@@ -358,7 +405,7 @@ export function PdfReader({
       }
       viewer.current = null;
       instance?.setDocument(null);
-      void task?.destroy();
+      destroyDocument();
     };
   }, []);
   function goTo() {

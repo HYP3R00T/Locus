@@ -155,6 +155,7 @@ export function StudyArea({
                             key={`${document.workspaceId}:${document.id}:${data.revision}`}
                             document={document}
                             paneId={pane.id}
+                            startupSlot={panes.findIndex((item) => item.id === pane.id)}
                             onReady={(ready) => reportReady(pane.id, ready)}
                             onViewPosition={(source, page, y) =>
                               data.rememberPanePosition(pane.id, source, page, y)
@@ -172,6 +173,7 @@ export function StudyArea({
                             drawing={drawing}
                             onReady={(ready) => reportReady(pane.id, ready)}
                             paneId={pane.id}
+                            startupSlot={panes.findIndex((item) => item.id === pane.id)}
                             onError={data.reportError}
                           />
                         ) : (
