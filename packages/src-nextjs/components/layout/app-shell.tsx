@@ -8,8 +8,10 @@ import {
   Settings2Icon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useConfiguration } from "@/components/configuration-provider";
 import { NavigationAction } from "@/components/layout/navigation-action";
 import { NavigationLayout, useMobileNavigation } from "@/components/layout/navigation-layout";
+import { StartupLoading } from "@/components/layout/startup-loading";
 import {
   type PreferenceSection,
   PreferencesSettings,
@@ -54,6 +56,7 @@ import { cn } from "@/lib/utils";
 export function AppShell() {
   const [appearance, setAppearance] = useState<Workspace | null>(null);
   const data = useLibrary();
+  const configuration = useConfiguration();
   const [view, setView] = useState<"workspace" | "settings">("workspace");
   const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("appearance");
   const [settingsQuery, setSettingsQuery] = useState("");
@@ -354,145 +357,152 @@ export function AppShell() {
           }
         />
       )}
-      <NavigationLayout
-        primaryExpanded={navigationExpanded}
-        contextExpanded={contextVisible}
-        primaryNavigation={
-          <aside
-            aria-label="Primary navigation"
-            className="flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden bg-client-surface py-2"
-          >
-            <div className="flex h-9 shrink-0 items-center">
-              <div className="flex w-[55px] shrink-0 justify-center">
-                <NavigationAction
-                  compact
-                  aria-label={navigationLabel}
-                  title={navigationLabel}
-                  command="navigation.primary"
-                  aria-expanded={navigationExpanded}
-                  aria-controls="primary-navigation"
-                  onClick={() => setNavigationExpanded(!navigationExpanded)}
-                >
-                  {navigationExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                </NavigationAction>
-              </div>
-              {navigationExpanded && <span className="truncate text-sm font-medium">Locus</span>}
-            </div>
-            <nav
-              id="primary-navigation"
-              aria-label="Application"
-              className="flex min-h-0 flex-1 flex-col px-2"
+      <StartupLoading
+        ready={data.ready && configuration.ready}
+        panes={data.layout.columns.flatMap((column) =>
+          column.panes.filter((pane) => pane.content).map((pane) => pane.id),
+        )}
+      >
+        <NavigationLayout
+          primaryExpanded={navigationExpanded}
+          contextExpanded={contextVisible}
+          primaryNavigation={
+            <aside
+              aria-label="Primary navigation"
+              className="flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden bg-client-surface py-2"
             >
-              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-                {workspaceList(!navigationExpanded)}
-              </div>
-              <NavigationAction
-                compact={!navigationExpanded}
-                aria-label="Create workspace"
-                title="Create workspace"
-                command="workspace.new"
-                disabled={!data.ready || data.busy || !data.native}
-                onClick={() => openCreate("workspace")}
-              >
-                <PlusIcon />
-                {navigationExpanded && <span>Create workspace</span>}
-              </NavigationAction>
-              <NavigationAction
-                compact={!navigationExpanded}
-                aria-label="Settings"
-                title="Settings"
-                command="preferences"
-                aria-pressed={view === "settings"}
-                className={cn("mt-2", view === "settings" && "bg-sidebar-accent")}
-                onClick={() => {
-                  setView("settings");
-                  setMobileOpen(false);
-                }}
-              >
-                <Settings2Icon />
-                {navigationExpanded && <span>Settings</span>}
-              </NavigationAction>
-            </nav>
-          </aside>
-        }
-        contextNavigation={
-          <aside
-            id="context-navigation"
-            aria-label={view === "settings" ? "Settings navigation" : "Workspace navigation"}
-            className="flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden bg-context-surface py-2"
-          >
-            <div className="flex h-9 shrink-0 items-center">
-              {view === "settings" ? (
-                <h2 className="truncate px-5 text-xs font-medium">Settings</h2>
-              ) : (
+              <div className="flex h-9 shrink-0 items-center">
                 <div className="flex w-[55px] shrink-0 justify-center">
                   <NavigationAction
                     compact
-                    aria-label={contextLabel}
-                    title={contextLabel}
-                    command="navigation.materials"
-                    aria-expanded={contextExpanded}
-                    aria-controls="context-navigation"
-                    onClick={() => setContextExpanded(!contextExpanded)}
+                    aria-label={navigationLabel}
+                    title={navigationLabel}
+                    command="navigation.primary"
+                    aria-expanded={navigationExpanded}
+                    aria-controls="primary-navigation"
+                    onClick={() => setNavigationExpanded(!navigationExpanded)}
                   >
-                    {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                    {navigationExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                   </NavigationAction>
                 </div>
-              )}
-            </div>
-            <div
-              className={cn(
-                "min-h-0 flex-1 overflow-x-hidden overflow-y-auto",
-                view === "workspace" && "locus-materials-reveal",
-                !contextVisible && "hidden",
-              )}
-            >
-              {view === "workspace" ? tree : settingsNavigation}
-            </div>
-            {!contextVisible && (
-              <nav aria-label="Compact workspace navigation" className="px-2">
+                {navigationExpanded && <span className="truncate text-sm font-medium">Locus</span>}
+              </div>
+              <nav
+                id="primary-navigation"
+                aria-label="Application"
+                className="flex min-h-0 flex-1 flex-col px-2"
+              >
+                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+                  {workspaceList(!navigationExpanded)}
+                </div>
                 <NavigationAction
-                  compact
-                  aria-label="Show materials"
-                  title="Materials"
-                  command="navigation.materials"
-                  onClick={() => setContextExpanded(true)}
+                  compact={!navigationExpanded}
+                  aria-label="Create workspace"
+                  title="Create workspace"
+                  command="workspace.new"
+                  disabled={!data.ready || data.busy || !data.native}
+                  onClick={() => openCreate("workspace")}
                 >
-                  <FolderIcon />
+                  <PlusIcon />
+                  {navigationExpanded && <span>Create workspace</span>}
+                </NavigationAction>
+                <NavigationAction
+                  compact={!navigationExpanded}
+                  aria-label="Settings"
+                  title="Settings"
+                  command="preferences"
+                  aria-pressed={view === "settings"}
+                  className={cn("mt-2", view === "settings" && "bg-sidebar-accent")}
+                  onClick={() => {
+                    setView("settings");
+                    setMobileOpen(false);
+                  }}
+                >
+                  <Settings2Icon />
+                  {navigationExpanded && <span>Settings</span>}
                 </NavigationAction>
               </nav>
-            )}
-          </aside>
-        }
-      >
-        <div className="flex h-full min-w-0 flex-1 flex-col">
-          {data.ready && !data.native && (
-            <p className="border-b px-4 py-2 text-xs text-muted-foreground">
-              Open the Locus desktop app to access your workspaces, PDFs, and local files.
-            </p>
-          )}
-          <main
-            className={cn(
-              "min-h-0 min-w-0 flex-1",
-              view === "settings"
-                ? "locus-navigation-frame overflow-hidden bg-background"
-                : "overflow-hidden",
-            )}
-          >
-            {view === "settings" ? (
-              <div className="h-full min-h-0 overflow-hidden bg-background">
-                <PreferencesSettings
-                  section={preferenceSection}
-                  query={settingsQuery}
-                  onQueryChange={setSettingsQuery}
-                />
+            </aside>
+          }
+          contextNavigation={
+            <aside
+              id="context-navigation"
+              aria-label={view === "settings" ? "Settings navigation" : "Workspace navigation"}
+              className="flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden bg-context-surface py-2"
+            >
+              <div className="flex h-9 shrink-0 items-center">
+                {view === "settings" ? (
+                  <h2 className="truncate px-5 text-xs font-medium">Settings</h2>
+                ) : (
+                  <div className="flex w-[55px] shrink-0 justify-center">
+                    <NavigationAction
+                      compact
+                      aria-label={contextLabel}
+                      title={contextLabel}
+                      command="navigation.materials"
+                      aria-expanded={contextExpanded}
+                      aria-controls="context-navigation"
+                      onClick={() => setContextExpanded(!contextExpanded)}
+                    >
+                      {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                    </NavigationAction>
+                  </div>
+                )}
               </div>
-            ) : (
-              <StudyArea data={data} onCreateWorkspace={() => openCreate("workspace")} />
+              <div
+                className={cn(
+                  "min-h-0 flex-1 overflow-x-hidden overflow-y-auto",
+                  view === "workspace" && "locus-materials-reveal",
+                  !contextVisible && "hidden",
+                )}
+              >
+                {view === "workspace" ? tree : settingsNavigation}
+              </div>
+              {!contextVisible && (
+                <nav aria-label="Compact workspace navigation" className="px-2">
+                  <NavigationAction
+                    compact
+                    aria-label="Show materials"
+                    title="Materials"
+                    command="navigation.materials"
+                    onClick={() => setContextExpanded(true)}
+                  >
+                    <FolderIcon />
+                  </NavigationAction>
+                </nav>
+              )}
+            </aside>
+          }
+        >
+          <div className="flex h-full min-w-0 flex-1 flex-col">
+            {data.ready && !data.native && (
+              <p className="border-b px-4 py-2 text-xs text-muted-foreground">
+                Open the Locus desktop app to access your workspaces, PDFs, and local files.
+              </p>
             )}
-          </main>
-        </div>
-      </NavigationLayout>
+            <main
+              className={cn(
+                "min-h-0 min-w-0 flex-1",
+                view === "settings"
+                  ? "locus-navigation-frame overflow-hidden bg-background"
+                  : "overflow-hidden",
+              )}
+            >
+              {view === "settings" ? (
+                <div className="h-full min-h-0 overflow-hidden bg-background">
+                  <PreferencesSettings
+                    section={preferenceSection}
+                    query={settingsQuery}
+                    onQueryChange={setSettingsQuery}
+                  />
+                </div>
+              ) : (
+                <StudyArea data={data} onCreateWorkspace={() => openCreate("workspace")} />
+              )}
+            </main>
+          </div>
+        </NavigationLayout>
+      </StartupLoading>
       <SheetContent side="left" className="gap-0 bg-sidebar data-[side=left]:w-[min(20rem,90vw)]">
         <SheetHeader>
           <SheetTitle>Locus</SheetTitle>

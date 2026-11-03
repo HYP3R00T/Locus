@@ -28,13 +28,17 @@ export function PdfReader({
   onViewPosition,
   onLocate,
   paneId,
+  onReady,
 }: {
   document: StudyDocument;
   onPosition: (document: StudyDocument, pageIndex: number, y: number) => Promise<void>;
   onViewPosition: (document: StudyDocument, pageIndex: number, y: number) => void;
   onLocate: () => void;
   paneId: string;
+  onReady: (ready?: boolean) => boolean;
 }) {
+  const readyCallback = useRef(onReady);
+  readyCallback.current = onReady;
   const [pageIndex, setPageIndex] = useState(document.pageIndex);
   const [count, setCount] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -46,6 +50,11 @@ export function PdfReader({
   const [positionError, setPositionError] = useState<string | null>(null);
   const [passwordNeeded, setPasswordNeeded] = useState(false);
   const [password, setPassword] = useState("");
+  const needsAttention = useRef(false);
+  needsAttention.current = !!(error || passwordNeeded);
+  useEffect(() => {
+    if (error || passwordNeeded) readyCallback.current();
+  }, [error, passwordNeeded]);
   const pageInput = useRef<HTMLInputElement>(null);
   const pageField = useId();
   const scroll = useRef<HTMLDivElement>(null);
@@ -189,7 +198,7 @@ export function PdfReader({
 
       const loaded = await task.promise;
       if (cancelled || !scroll.current || !pages.current) return;
-      const { PDFViewer, EventBus, PDFLinkService, LinkTarget } = await import(
+      const { PDFViewer, EventBus, PDFLinkService, LinkTarget, RenderingStates } = await import(
         "pdfjs-dist/web/pdf_viewer.mjs"
       );
       if (cancelled) return;
@@ -212,6 +221,17 @@ export function PdfReader({
       links.setDocument(loaded);
       viewer.current = instance;
       const activeViewer = instance;
+      const paintedScales = new Map<number, number>();
+      function checkReady() {
+        if (cancelled || restoring || fitTimer !== undefined) return;
+        const index = Math.min(source.pageIndex, loaded.numPages - 1);
+        const page = activeViewer.getPageView(index);
+        if (
+          page?.renderingState === RenderingStates.FINISHED &&
+          paintedScales.get(index + 1) === page.scale
+        )
+          readyCallback.current();
+      }
       function restore() {
         if (cancelled) return;
         restoring = true;
@@ -233,6 +253,7 @@ export function PdfReader({
           setPageIndex(index);
           frame = requestAnimationFrame(() => {
             restoring = false;
+            checkReady();
           });
         });
       }
@@ -245,11 +266,28 @@ export function PdfReader({
         if (!interacted.current) restore();
       });
       eventBus.on("scalechanging", ({ scale }: { scale: number }) => {
+        readyCallback.current(needsAttention.current);
         if (!cancelled) setZoom(scale);
       });
-      eventBus.on("pagerendered", ({ error: renderError }: { error?: Error }) => {
-        if (renderError && !cancelled) setError(String(renderError));
-      });
+      eventBus.on(
+        "pagerendered",
+        ({
+          error: renderError,
+          pageNumber,
+          cssTransform,
+        }: {
+          error?: Error;
+          pageNumber: number;
+          cssTransform: boolean;
+        }) => {
+          if (renderError && !cancelled) setError(String(renderError));
+          if (!cssTransform && !renderError) {
+            const page = activeViewer.getPageView(pageNumber - 1);
+            if (page) paintedScales.set(pageNumber, page.scale);
+          }
+          checkReady();
+        },
+      );
       eventBus.on("updateviewarea", ({ location }: { location: { pageNumber: number } }) => {
         if (cancelled || restoring) return;
         const index = location.pageNumber - 1;
@@ -274,6 +312,7 @@ export function PdfReader({
         previousWidth = width;
         previousHeight = height;
         if (!widthChanged && !(fit.current === "page-height" && heightChanged)) return;
+        readyCallback.current(needsAttention.current);
         clearTimeout(fitTimer);
         const mode = fit.current;
         const page = activeViewer.getPageView(activeViewer.currentPageNumber - 1);
@@ -292,10 +331,12 @@ export function PdfReader({
           }
         }
         fitTimer = setTimeout(() => {
+          fitTimer = undefined;
           if (!cancelled && fit.current && activeViewer.pagesCount) {
             // Restore the exact preset after the gesture API's rounded preview.
             activeViewer.currentScaleValue = fit.current;
           }
+          checkReady();
         }, 150);
       });
       resize.observe(container);

@@ -15,6 +15,16 @@ Each workspace restores its open materials, active pane, split proportions, indi
 and expanded folder branch after switching workspaces or restarting Locus. Session metadata is debounced
 for 350 ms and saved through Rust to SQLite. Normal window closing flushes pending session and drawing writes;
 a failure keeps the window open for retry. Forced termination can lose the latest unsaved interval.
+Startup uses one opaque loading layer over the navigation and study area. The mounted workspace is isolated
+in a lower stacking context so viewer controls cannot appear above it. It fades after configuration, metadata,
+the restored PDF page at its final fitted scale, and initial whiteboard scenes/fonts are ready. Readiness is
+invalidated during startup resizing or zoom so an early preview cannot dismiss the loading layer. Its neutral
+surface stays unchanged while the selected theme is applied underneath. No minimum loading delay is added;
+the app does not wait for every PDF page. Reduced motion disables the spinner animation and fade. Errors and password prompts
+release their pane's readiness gate; after ten seconds, Show workspace lets the user bypass a stalled renderer.
+During loading, PDF containers use hidden overflow with the existing stable scrollbar gutter. Programmatic
+page restoration still works, while WebKit overlay scrollbar thumbs cannot paint above the loading layer.
+Other scrollbar thumbs are transparent until reveal. Restoring ordinary scrolling does not change the reserved gutter.
 Missing or removed materials leave empty slots. PDF zoom currently reopens in fit-to-width mode; navigation column
 widths and the selected Settings page are not part of the saved workspace session.
 

@@ -3,7 +3,7 @@
 import { DefaultSidebar, Excalidraw, MainMenu, serializeAsJSON } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, ExcalidrawProps } from "@excalidraw/excalidraw/types";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useWorkbench } from "@/components/workbench/workbench-context";
 import { readDrawing, registerDrawingWriter, saveDrawing } from "@/lib/drawings";
@@ -14,11 +14,15 @@ export function WhiteboardEditor({
   drawing,
   onError,
   paneId,
+  onReady,
 }: {
   drawing: Drawing;
   onError: (message: string) => void;
   paneId: string;
+  onReady: (ready?: boolean) => boolean;
 }) {
+  const readyCallback = useRef(onReady);
+  readyCallback.current = onReady;
   const { preferences } = useWorkbench();
   const { resolvedTheme } = useTheme();
   const [status, setStatus] = useState("Opening…");
@@ -26,11 +30,45 @@ export function WhiteboardEditor({
   const [initialData, setInitialData] = useState<ExcalidrawProps["initialData"]>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  useEffect(() => {
+    if (loadError) readyCallback.current();
+  }, [loadError]);
   const latest = useRef<Parameters<NonNullable<ExcalidrawProps["onChange"]>> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const loaded = useRef(false);
   const lastScene = useRef<string | null>(null);
   const alive = useRef(true);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  const readyFrame = useRef(0);
+  const readyGeneration = useRef(0);
+  const prepareReady = useCallback(() => {
+    if (!readyCallback.current(false)) return;
+    const generation = ++readyGeneration.current;
+    cancelAnimationFrame(readyFrame.current);
+    readyFrame.current = requestAnimationFrame(() => {
+      void document.fonts.ready.then(() => {
+        if (!alive.current || readyGeneration.current !== generation) return;
+        readyFrame.current = requestAnimationFrame(() => {
+          readyFrame.current = requestAnimationFrame(() => {
+            if (alive.current && readyGeneration.current === generation) readyCallback.current();
+          });
+        });
+      });
+    });
+  }, []);
+  useEffect(() => {
+    if (!wrapper.current) return;
+    const observer = new ResizeObserver(() => {
+      if (initialized.current) prepareReady();
+    });
+    observer.observe(wrapper.current);
+    return () => {
+      observer.disconnect();
+      ++readyGeneration.current;
+      cancelAnimationFrame(readyFrame.current);
+    };
+  }, [prepareReady]);
   const pending = useRef(Promise.resolve());
   const editor = useRef<ExcalidrawImperativeAPI | null>(null);
   const report = useRef(onError);
@@ -38,6 +76,7 @@ export function WhiteboardEditor({
   useEffect(() => {
     let cancelled = false;
     loaded.current = false;
+    initialized.current = false;
     latest.current = null;
     setReady(false);
     setLoadError(null);
@@ -104,6 +143,7 @@ export function WhiteboardEditor({
   useNotice(loadError, "Could not open the whiteboard");
   return (
     <div
+      ref={wrapper}
       data-whiteboard-id={paneId}
       data-controls-visible={preferences.whiteboardControlsVisible}
       className="locus-whiteboard relative h-full min-h-0 min-w-0 overflow-hidden"
@@ -132,6 +172,8 @@ export function WhiteboardEditor({
           zenModeEnabled={false}
           onChange={(...scene) => {
             if (!loaded.current || scene[1].isLoading) return;
+            initialized.current = true;
+            prepareReady();
             latest.current = scene;
             setStatus("Saving…");
             clearTimeout(timer.current);
