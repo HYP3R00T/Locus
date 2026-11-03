@@ -42,6 +42,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Use square corners for navigation, study panes, resize gutters, and pane drop previews.
 - Resize fitted PDFs continuously with their pane, then redraw sharply after resizing settles.
 - Hide and restore whiteboard controls in compact panes as well as large panes using the configured shortcut (Ctrl+H by default).
 - Expand unchanged older bundled theme files so title bars and study panes receive the selected palette instead of default-dark fallback colors.

@@ -190,7 +190,7 @@
 .locus-navigation-frame,
 .locus-study-pane {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 0;
 }
 .locus-study-pane {
   border-color: var(--pane-border);
@@ -284,7 +284,7 @@
 .locus-navigation-primary {
   border: 1px solid var(--sidebar-border);
   border-right: 0;
-  border-radius: 6px 0 0 6px;
+  border-radius: 0;
 }
 
 .locus-workspace-active,
@@ -297,7 +297,7 @@
 .locus-navigation-context {
   border: 1px solid var(--sidebar-border);
   border-left: 0;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0;
 }
 .locus-study-pane:focus {
   outline: none;
@@ -309,7 +309,7 @@
   position: relative;
   flex-shrink: 0;
   width: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   background: transparent;
   cursor: col-resize;
 }

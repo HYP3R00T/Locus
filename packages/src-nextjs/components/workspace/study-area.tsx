@@ -198,7 +198,7 @@ export function StudyArea({
                         {drop?.paneId === pane.id && (
                           <div
                             aria-hidden="true"
-                            className={`pointer-events-none absolute z-40 rounded-sm border-2 ${drop.allowed ? "border-ring bg-accent/40" : "border-destructive bg-destructive/10"} ${previewClasses[drop.zone]}`}
+                            className={`pointer-events-none absolute z-40 border-2 ${drop.allowed ? "border-ring bg-accent/40" : "border-destructive bg-destructive/10"} ${previewClasses[drop.zone]}`}
                           />
                         )}
                       </section>
