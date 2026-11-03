@@ -4,6 +4,7 @@ import { DefaultSidebar, Excalidraw, MainMenu, serializeAsJSON } from "@excalidr
 import type { ExcalidrawImperativeAPI, ExcalidrawProps } from "@excalidraw/excalidraw/types";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useConfiguration } from "@/components/configuration-provider";
 import { Button } from "@/components/ui/button";
 import { useWorkbench } from "@/components/workbench/workbench-context";
 import { readDrawing, registerDrawingWriter, saveDrawing } from "@/lib/drawings";
@@ -14,7 +15,12 @@ import { markStartup } from "@/lib/startup-timing";
 // Excalidraw compares children by identity. Keep menu/status updates outside its
 // render dependencies so onChange cannot cause another editor update by itself.
 const editorOptions: ExcalidrawProps["UIOptions"] = {
-  canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false },
+  canvasActions: {
+    loadScene: false,
+    saveToActiveFile: false,
+    toggleTheme: false,
+    changeViewBackgroundColor: false,
+  },
 };
 const editorMenu = [
   <DefaultSidebar.Trigger key="library-trigger" style={{ display: "none" }} />,
@@ -23,7 +29,6 @@ const editorMenu = [
     <MainMenu.DefaultItems.Export />
     <MainMenu.DefaultItems.SaveAsImage />
     <MainMenu.DefaultItems.ClearCanvas />
-    <MainMenu.DefaultItems.ChangeCanvasBackground />
   </MainMenu>,
 ];
 
@@ -45,6 +50,9 @@ export function WhiteboardEditor({
   const timingSlot = useRef(startupSlot);
   timingSlot.current = startupSlot;
   const { preferences } = useWorkbench();
+  const { appearance } = useConfiguration();
+  const openingPreferences = useRef(appearance);
+  openingPreferences.current = appearance;
   const { resolvedTheme } = useTheme();
   const [status, setStatus] = useState("Opening…");
   const [ready, setReady] = useState(false);
@@ -58,6 +66,7 @@ export function WhiteboardEditor({
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const loaded = useRef(false);
   const lastScene = useRef<string | null>(null);
+  const savedBackground = useRef("#ffffff");
   const alive = useRef(true);
   const wrapper = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -113,7 +122,21 @@ export function WhiteboardEditor({
           throw new Error("Invalid Excalidraw scene.");
         markStartup("whiteboard_scene_loaded", timingSlot.current);
         lastScene.current = scene;
-        setInitialData(initial);
+        savedBackground.current = initial.appState?.viewBackgroundColor ?? "#ffffff";
+        // CSS supplies theme paper without Excalidraw's dark-mode canvas filter
+        // transforming it. Preserve the file's paper color when autosaving.
+        setInitialData({
+          ...initial,
+          appState: {
+            ...initial.appState,
+            viewBackgroundColor: "transparent",
+            activeTool: { type: "freedraw", locked: false, lastActiveTool: null, customType: null },
+            currentItemStrokeColor: openingPreferences.current.whiteboardStrokeColor,
+            currentItemStrokeWidth: openingPreferences.current.whiteboardStrokeWidth,
+            selectedElementIds: {},
+            selectedGroupIds: {},
+          },
+        });
         loaded.current = true;
         setReady(true);
       })
@@ -135,7 +158,12 @@ export function WhiteboardEditor({
   function flush(): Promise<void> {
     if (!loaded.current || !latest.current) return pending.current;
     const [elements, appState, files] = latest.current;
-    const scene = serializeAsJSON(elements, appState, files, "local");
+    const scene = serializeAsJSON(
+      elements,
+      { ...appState, viewBackgroundColor: savedBackground.current },
+      files,
+      "local",
+    );
     if (scene === lastScene.current) {
       if (alive.current) setStatus("Saved");
       return pending.current;
