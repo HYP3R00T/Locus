@@ -1,6 +1,13 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
@@ -37,6 +44,47 @@ export function useMobileNavigation() {
   return useSyncExternalStore(subscribeToViewport, isMobileViewport, isServerMobileViewport);
 }
 
+// Commit one target layout; CSS animates between widths without per-frame React updates.
+function useNavigationMotion(
+  expanded: boolean,
+  mobile: boolean,
+  panel: RefObject<PanelImperativeHandle | null>,
+  width: RefObject<number>,
+  expandedMinimum: number,
+) {
+  const [settledExpanded, setSettledExpanded] = useState(expanded);
+  const [animating, setAnimating] = useState(false);
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (mobile) {
+      setSettledExpanded(expanded);
+      setAnimating(false);
+      return;
+    }
+    const target = expanded ? width.current : COMPACT_WIDTH;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = initialized.current && !reduced ? 200 : 0;
+    initialized.current = true;
+    // Relax minimum width during travel; restore normal drag bounds on completion.
+    setAnimating(true);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      panel.current?.resize(target);
+      const finish = () => {
+        setSettledExpanded(expanded);
+        setAnimating(false);
+      };
+      if (duration) timer = setTimeout(finish, duration);
+      else finish();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [expanded, mobile, panel, width]);
+  return { animating, minimum: animating || !settledExpanded ? COMPACT_WIDTH : expandedMinimum };
+}
+
 export function NavigationLayout({
   primaryExpanded,
   contextExpanded,
@@ -58,24 +106,20 @@ export function NavigationLayout({
   const primaryWidth = useRef(PRIMARY_MIN);
   const contextWidth = useRef(256);
 
-  useEffect(() => {
-    if (mobile) return;
-    // Let the panel library commit the new collapse constraints before resizing.
-    const frame = requestAnimationFrame(() => {
-      if (primaryExpanded) primary.current?.resize(primaryWidth.current);
-      else primary.current?.collapse();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [primaryExpanded, mobile]);
-
-  useEffect(() => {
-    if (mobile) return;
-    const frame = requestAnimationFrame(() => {
-      if (contextExpanded) context.current?.resize(contextWidth.current);
-      else context.current?.collapse();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [contextExpanded, mobile]);
+  const primaryMotion = useNavigationMotion(
+    primaryExpanded,
+    mobile,
+    primary,
+    primaryWidth,
+    PRIMARY_MIN,
+  );
+  const contextMotion = useNavigationMotion(
+    contextExpanded,
+    mobile,
+    context,
+    contextWidth,
+    CONTEXT_MIN,
+  );
 
   if (mobile) {
     return (
@@ -89,6 +133,7 @@ export function NavigationLayout({
         orientation="horizontal"
         className="h-full! min-w-0"
         elementRef={primaryGroup}
+        data-navigation-motion={primaryMotion.animating || undefined}
         onLayoutChanged={(layout, meta) => {
           if (primaryExpanded && meta.isUserInteraction && primaryGroup.current) {
             // DOM panel widths can still be mid-transition; remember the committed layout instead.
@@ -105,10 +150,10 @@ export function NavigationLayout({
           id="application-navigation-panel"
           panelRef={primary}
           defaultSize={primaryExpanded ? PRIMARY_MIN : COMPACT_WIDTH}
-          minSize={PRIMARY_MIN}
+          minSize={primaryMotion.minimum}
           maxSize={PRIMARY_MAX}
           collapsedSize={COMPACT_WIDTH}
-          collapsible={!primaryExpanded}
+          collapsible={false}
           groupResizeBehavior="preserve-pixel-size"
           className="h-full overflow-hidden"
           style={{ overflow: "hidden" }}
@@ -118,7 +163,7 @@ export function NavigationLayout({
         <ResizableHandle
           aria-label="Resize primary navigation"
           aria-hidden={!primaryExpanded}
-          disabled={!primaryExpanded}
+          disabled={!primaryExpanded || primaryMotion.animating}
           className={cn(
             "locus-resize-gutter locus-navigation-inner-gutter",
             !primaryExpanded && "pointer-events-none bg-transparent after:hidden",
@@ -126,7 +171,7 @@ export function NavigationLayout({
         />
         <ResizablePanel
           id="workspace-region"
-          minSize={CONTENT_MIN + (contextExpanded ? CONTEXT_MIN : COMPACT_WIDTH) + SEPARATOR_WIDTH}
+          minSize={CONTENT_MIN + contextMotion.minimum + SEPARATOR_WIDTH}
           className="h-full min-w-0"
         >
           {/* Nesting preserves the context width while the primary column is dragged. */}
@@ -134,6 +179,7 @@ export function NavigationLayout({
             orientation="horizontal"
             className="min-w-0"
             elementRef={contextGroup}
+            data-navigation-motion={contextMotion.animating || undefined}
             onLayoutChanged={(layout, meta) => {
               if (contextExpanded && meta.isUserInteraction && contextGroup.current) {
                 const width =
@@ -149,10 +195,10 @@ export function NavigationLayout({
               id="study-navigation-panel"
               panelRef={context}
               defaultSize={contextExpanded ? 256 : COMPACT_WIDTH}
-              minSize={CONTEXT_MIN}
+              minSize={contextMotion.minimum}
               maxSize={CONTEXT_MAX}
               collapsedSize={COMPACT_WIDTH}
-              collapsible={!contextExpanded}
+              collapsible={false}
               groupResizeBehavior="preserve-pixel-size"
               className="h-full overflow-hidden"
               style={{ overflow: "hidden" }}
@@ -164,7 +210,7 @@ export function NavigationLayout({
             <ResizableHandle
               aria-label="Resize workspace navigation"
               aria-hidden={!contextExpanded}
-              disabled={!contextExpanded}
+              disabled={!contextExpanded || contextMotion.animating}
               className={cn(
                 "locus-resize-gutter",
                 !contextExpanded && "pointer-events-none bg-transparent after:hidden",

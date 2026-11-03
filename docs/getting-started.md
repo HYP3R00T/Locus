@@ -166,7 +166,7 @@ limit expansion. Collapsed columns stay at 56 px and cannot be dragged. Each col
 expanded width during the current session. Resizing the first column preserves the study tree's width when space allows.
 On narrow screens the navigation moves into a sheet.
 Desktop windows use a custom draggable title bar with the theme toggle, minimize, maximize/restore, and close controls.
-The browser preview keeps ordinary browser controls. Sidebar toggles update layout immediately; PDF width fitting
+The browser preview keeps ordinary browser controls. Sidebar toggles animate their widths over 200 ms (instantly with reduced motion enabled); PDF width fitting
 is deferred until width changes settle, avoiding repeated renders during resizing.
 Settings stays at the bottom of the application rail; Appearance groups light/dark palettes and Follow system.
 

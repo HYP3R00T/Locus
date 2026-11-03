@@ -261,14 +261,6 @@ export function StudyTree({
           />
         }
       >
-        <NavigationAction
-          aria-current={!activeFolderId ? "true" : undefined}
-          onClick={() => onFolderSelect(null)}
-          className={cn("mb-2 gap-2 px-2 font-medium", !activeFolderId && "bg-sidebar-accent")}
-        >
-          <FolderIcon />
-          <span className="truncate">{workspace.title}</span>
-        </NavigationAction>
         {folders.filter((folder) => !folder.parentId).map(folderRow)}
         {documents
           .filter((d) => !d.folderId)
