@@ -37,6 +37,7 @@ pub struct Workspace {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {
+    parent_id: Option<String>,
     id: String,
     workspace_id: String,
     title: String,
@@ -55,11 +56,18 @@ pub struct Document {
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Navigation {
+    workspace_id: String,
+    folder_id: Option<String>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     workspaces: Vec<Workspace>,
     folders: Vec<Folder>,
     documents: Vec<Document>,
     drawings: Vec<Drawing>,
+    navigation: Vec<Navigation>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,8 +102,13 @@ pub enum Action {
         workspace_id: String,
     },
     CreateFolder {
+        parent_id: Option<String>,
         workspace_id: String,
         title: String,
+    },
+    SelectFolder {
+        workspace_id: String,
+        folder_id: Option<String>,
     },
     RemoveFolder {
         folder_id: String,
@@ -150,7 +163,7 @@ impl Library {
                     .map_err(err)?;
                 tx.commit().map_err(err)?;
             }
-            1..=3 => {}
+            1..=5 => {}
             _ => return Err("This library was created by a newer Locus version.".into()),
         }
         if version < 2 {
@@ -162,6 +175,18 @@ impl Library {
         if version < 3 {
             let tx = db.unchecked_transaction().map_err(err)?;
             tx.execute_batch(include_str!("../migrations/003_drawings.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 4 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/004_subfolders.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 5 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/005_navigation_selection.sql"))
                 .map_err(err)?;
             tx.commit().map_err(err)?;
         }
@@ -200,12 +225,13 @@ impl Library {
                 .map_err(err)?;
             }
             Action::CreateFolder {
+                parent_id,
                 workspace_id,
                 title: value,
             } => {
                 tx.execute(
-                    "INSERT INTO folders VALUES(?1,?2,?3)",
-                    params![id(), workspace_id, title(&value)?],
+                    "INSERT INTO folders(id,workspace_id,title,parent_id) VALUES(?1,?2,?3,?4)",
+                    params![id(), workspace_id, title(&value)?, parent_id],
                 )
                 .map_err(err)?;
             }
@@ -222,6 +248,9 @@ impl Library {
                 .map_err(err)?;
                 tx.execute("DELETE FROM workspaces WHERE id=?1", [&workspace_id])
                     .map_err(err)?;
+            }
+            Action::SelectFolder { workspace_id, folder_id } => {
+                tx.execute("INSERT INTO workspace_navigation(workspace_id,folder_id) VALUES(?1,?2) ON CONFLICT(workspace_id) DO UPDATE SET folder_id=excluded.folder_id", params![workspace_id, folder_id]).map_err(err)?;
             }
             Action::RemoveFolder { folder_id } => {
                 tx.execute(
@@ -458,10 +487,13 @@ fn snapshot(db: &Connection) -> Result<Snapshot> {
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(err)?;
     let folders = db
-        .prepare("SELECT id,workspace_id,title FROM folders ORDER BY title COLLATE NOCASE,id")
+        .prepare(
+            "SELECT id,workspace_id,title,parent_id FROM folders ORDER BY title COLLATE NOCASE,id",
+        )
         .map_err(err)?
         .query_map([], |r| {
             Ok(Folder {
+                parent_id: r.get(3)?,
                 id: r.get(0)?,
                 workspace_id: r.get(1)?,
                 title: r.get(2)?,
@@ -471,7 +503,20 @@ fn snapshot(db: &Connection) -> Result<Snapshot> {
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(err)?;
     let documents=db.prepare("SELECT d.id,w.workspace_id,w.folder_id,coalesce(w.title,d.title),d.path,coalesce(p.page_index,0),coalesce(p.y,0),coalesce(p.position_version,2) FROM workspace_documents w JOIN documents d ON d.id=w.document_id LEFT JOIN reading_positions p ON p.workspace_id=w.workspace_id AND p.document_id=d.id ORDER BY coalesce(w.title,d.title) COLLATE NOCASE,d.id").map_err(err)?.query_map([],|r|Ok(Document{id:r.get(0)?,workspace_id:r.get(1)?,folder_id:r.get(2)?,title:r.get(3)?,path:r.get(4)?,page_index:r.get(5)?,y:r.get(6)?,position_version:r.get(7)?})).map_err(err)?.collect::<std::result::Result<Vec<_>,_>>().map_err(err)?;
+    let navigation = db
+        .prepare("SELECT workspace_id,folder_id FROM workspace_navigation ORDER BY workspace_id")
+        .map_err(err)?
+        .query_map([], |r| {
+            Ok(Navigation {
+                workspace_id: r.get(0)?,
+                folder_id: r.get(1)?,
+            })
+        })
+        .map_err(err)?
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(err)?;
     Ok(Snapshot {
+        navigation,
         workspaces,
         folders,
         documents,
@@ -569,6 +614,7 @@ mod tests {
         let w = workspace(&store);
         let folder = store
             .apply(Action::CreateFolder {
+                parent_id: None,
                 workspace_id: w.clone(),
                 title: "Books".into(),
             })
@@ -651,6 +697,7 @@ mod tests {
         store.attach(&other, None, &file, None).unwrap();
         let folder = store
             .apply(Action::CreateFolder {
+                parent_id: None,
                 workspace_id: w.clone(),
                 title: "Books".into(),
             })
@@ -835,6 +882,165 @@ mod tests {
                     title: "No workspace".into()
                 })
                 .is_err()
+        );
+    }
+    #[test]
+    fn subfolders_and_active_selection_persist_without_losing_materials() {
+        let fixture = Fixture::new();
+        let store = fixture.store();
+        let w = workspace(&store);
+        let root = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                parent_id: None,
+                title: "Mechanics".into(),
+            })
+            .unwrap()
+            .folders[0]
+            .id
+            .clone();
+        let child = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                parent_id: Some(root.clone()),
+                title: "Exercises".into(),
+            })
+            .unwrap()
+            .folders
+            .into_iter()
+            .find(|folder| folder.parent_id.is_some())
+            .unwrap()
+            .id;
+        let pdf = fixture.pdf("book.pdf", b"%PDF-1.7 test");
+        store.attach(&w, Some(&child), &pdf, None).unwrap();
+        store
+            .apply(Action::SelectFolder {
+                workspace_id: w.clone(),
+                folder_id: Some(child.clone()),
+            })
+            .unwrap();
+        drop(store);
+        let store = fixture.store();
+        let loaded = store.apply(Action::List).unwrap();
+        assert_eq!(
+            loaded.navigation[0].folder_id.as_deref(),
+            Some(child.as_str())
+        );
+        let promoted = store
+            .apply(Action::RemoveFolder { folder_id: root })
+            .unwrap();
+        assert_eq!(promoted.folders.len(), 1);
+        assert!(promoted.folders[0].parent_id.is_none());
+        assert_eq!(
+            promoted.documents[0].folder_id.as_deref(),
+            Some(child.as_str())
+        );
+        let removed = store
+            .apply(Action::RemoveFolder { folder_id: child })
+            .unwrap();
+        assert!(removed.documents[0].folder_id.is_none());
+        assert!(removed.navigation[0].folder_id.is_none());
+        assert!(pdf.exists());
+    }
+
+    #[test]
+    fn folder_depth_and_cross_workspace_navigation_are_rejected() {
+        let fixture = Fixture::new();
+        let store = fixture.store();
+        let w = workspace(&store);
+        let root = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                parent_id: None,
+                title: "Mechanics".into(),
+            })
+            .unwrap()
+            .folders[0]
+            .id
+            .clone();
+        let child = store
+            .apply(Action::CreateFolder {
+                workspace_id: w.clone(),
+                parent_id: Some(root.clone()),
+                title: "Exercises".into(),
+            })
+            .unwrap()
+            .folders
+            .into_iter()
+            .find(|folder| folder.parent_id.is_some())
+            .unwrap()
+            .id;
+        assert!(
+            store
+                .apply(Action::CreateFolder {
+                    workspace_id: w.clone(),
+                    parent_id: Some(child),
+                    title: "Too deep".into()
+                })
+                .is_err()
+        );
+        let other = store
+            .apply(Action::CreateWorkspace {
+                title: "Chemistry".into(),
+            })
+            .unwrap()
+            .workspaces
+            .into_iter()
+            .find(|item| item.title == "Chemistry")
+            .unwrap()
+            .id;
+        assert!(
+            store
+                .apply(Action::CreateFolder {
+                    workspace_id: other.clone(),
+                    parent_id: Some(root.clone()),
+                    title: "Wrong workspace".into()
+                })
+                .is_err()
+        );
+        assert!(
+            store
+                .apply(Action::SelectFolder {
+                    workspace_id: other,
+                    folder_id: Some(root)
+                })
+                .is_err()
+        );
+        assert_eq!(store.apply(Action::List).unwrap().folders.len(), 2);
+    }
+
+    #[test]
+    fn v3_libraries_upgrade_with_existing_folders_intact() {
+        let fixture = Fixture::new();
+        let path = fixture.0.join("test.sqlite");
+        let db = Connection::open(&path).unwrap();
+        db.execute_batch(include_str!("../migrations/001_library.sql"))
+            .unwrap();
+        db.execute_batch(include_str!("../migrations/002_navigation.sql"))
+            .unwrap();
+        db.execute_batch(include_str!("../migrations/003_drawings.sql"))
+            .unwrap();
+        db.execute("INSERT INTO workspaces VALUES('workspace','Physics')", [])
+            .unwrap();
+        db.execute(
+            "INSERT INTO folders VALUES('folder','workspace','Mechanics')",
+            [],
+        )
+        .unwrap();
+        drop(db);
+        let store = Library::open(&path).unwrap();
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(data.folders[0].id, "folder");
+        assert!(data.folders[0].parent_id.is_none());
+        assert!(data.navigation.is_empty());
+        assert_eq!(
+            store
+                .db
+                .lock()
+                .unwrap()
+                .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
+                .unwrap(),
+            5
         );
     }
 }

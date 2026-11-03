@@ -2,6 +2,7 @@
 
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useConfiguration } from "@/components/configuration-provider";
 import { useSettingsView } from "@/components/settings/settings-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,10 +52,16 @@ export function KeyboardShortcutsSettings() {
     setRecording,
     mac,
   } = useWorkbench();
-  const [sort, setSort] = useState<{ column: ShortcutSort; direction: "asc" | "desc" }>({
-    column: "command",
-    direction: "asc",
-  });
+  const { appearance, updateAppearance } = useConfiguration();
+  const sort = appearance.shortcutSort;
+  function setSort(column: ShortcutSort) {
+    void updateAppearance({
+      shortcutSort: {
+        column,
+        direction: sort.column === column && sort.direction === "asc" ? "desc" : "asc",
+      },
+    });
+  }
   const [editingId, setEditingId] = useState<CommandId | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -121,14 +128,9 @@ export function KeyboardShortcutsSettings() {
                     variant="ghost"
                     size="sm"
                     className="h-auto gap-1 px-0 py-0"
+                    disabled={disabled}
                     aria-label={`Sort by ${title}`}
-                    onClick={() =>
-                      setSort((current) => ({
-                        column,
-                        direction:
-                          current.column === column && current.direction === "asc" ? "desc" : "asc",
-                      }))
-                    }
+                    onClick={() => setSort(column)}
                   >
                     {title}
                     {sort.column !== column ? (

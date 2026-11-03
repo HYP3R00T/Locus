@@ -44,7 +44,8 @@ identifier-based application-config directory; logs and study data also keep the
     "whiteboardControlsVisible": true,
     "primaryColumn": "left",
     "primaryRow": "top",
-    "notificationDuration": 3000
+    "notificationDuration": 3000,
+    "shortcutSort": { "column": "binding", "direction": "asc" }
 }
 ```
 
@@ -56,6 +57,9 @@ the stored selection is preserved.
 `primaryColumn` is `left` or `right`; `primaryRow` is `top` or `bottom`. Modifier-clicks target the
 other side; these preferences do not lock ordinary pane selection. `notificationDuration` accepts 3000,
 5000, 8000 milliseconds, or 0 for manual dismissal. Errors always use manual dismissal independently.
+`shortcutSort` stores the table's `column` (`command`, `binding`, `when`, or `source`) and `direction`
+(`asc` or `desc`). Defaults sort assigned keybindings first, with unassigned/disabled bindings last.
+This display preference is independent of the shortcut assignments themselves.
 Older files missing these fields receive defaults when loaded. Saves normalize those missing defaults
 before stale-write comparison, preserving detection of actual external changes.
 

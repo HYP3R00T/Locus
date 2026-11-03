@@ -75,7 +75,9 @@ binding already uses Mod+H, the canvas command keeps Alt+P where available, othe
 ## Preferences
 
 Open **Preferences** from the palette or Settings. Navigation lists Themes, Key Bindings, Layout,
-Whiteboard, Notifications, Configuration Files, and About directly. Settings pages share full-width rows
+Whiteboard, Notifications, Configuration Files, and About directly. The settings category column stays expanded on desktop, with its collapse toggle hidden and its
+collapse command disabled. Returning to the workspace restores its previous navigation state. Narrow
+windows retain the navigation drawer toggle. Settings pages share full-width rows
 and consistent spacing; no aggregate pages or modification stripes are displayed. Search and Modified
 filter the selected category. Navigation counts show matches in other categories while searching.
 
@@ -85,7 +87,8 @@ Key Bindings lists every registered command, including unassigned ones, in a sea
 Keybinding, When, and Source columns. When describes fixed dispatch scopes (PDF, whiteboard, or application),
 not editable condition expressions. Source distinguishes Default from Custom overrides. Action availability
 still applies. Click Command, Keybinding, When, or Source headers to sort ascending or descending.
-Unassigned bindings sort after assigned ones. Double-click a row or activate its edit button to record a combination; Enter saves and
+Sort column and direction persist in preferences. Keybinding ascending is the default; unassigned and
+disabled bindings stay after assigned ones in either direction. Double-click a row or activate its edit button to record a combination; Enter saves and
 Escape cancels. The editor can remove a binding or reset it to its default. Different PDF and whiteboard
 commands can use the same combination because their scopes do not overlap. Key Bindings search stays within
 shortcuts; settings search stays within its selected category. Conflicts are rejected for overlapping scopes.

@@ -1,7 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 
 export type Workspace = { id: string; title: string };
-export type Folder = { id: string; workspaceId: string; title: string };
+export type Folder = { id: string; workspaceId: string; title: string; parentId: string | null };
 export type StudyDocument = {
   id: string;
   workspaceId: string;
@@ -18,8 +18,15 @@ export type Library = {
   folders: Folder[];
   documents: StudyDocument[];
   drawings: Drawing[];
+  navigation: { workspaceId: string; folderId: string | null }[];
 };
-export const emptyLibrary: Library = { workspaces: [], folders: [], documents: [], drawings: [] };
+export const emptyLibrary: Library = {
+  workspaces: [],
+  folders: [],
+  documents: [],
+  drawings: [],
+  navigation: [],
+};
 export type LibraryAction =
   | { type: "list" }
   | { type: "createDrawing"; workspaceId: string; title: string }
@@ -27,7 +34,8 @@ export type LibraryAction =
   | { type: "removeDrawing"; drawingId: string }
   | { type: "createWorkspace"; title: string }
   | { type: "removeWorkspace"; workspaceId: string }
-  | { type: "createFolder"; workspaceId: string; title: string }
+  | { type: "createFolder"; workspaceId: string; title: string; parentId?: string | null }
+  | { type: "selectFolder"; workspaceId: string; folderId: string | null }
   | { type: "removeFolder"; folderId: string }
   | { type: "removeDocument"; workspaceId: string; documentId: string }
   | { type: "renameDocument"; workspaceId: string; documentId: string; title: string }

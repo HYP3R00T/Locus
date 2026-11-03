@@ -35,6 +35,20 @@ fn builtin_themes() -> Result<Vec<Theme>, String> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShortcutSort {
+    pub column: String,
+    pub direction: String,
+}
+impl Default for ShortcutSort {
+    fn default() -> Self {
+        Self {
+            column: "binding".into(),
+            direction: "asc".into(),
+        }
+    }
+}
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Preferences {
     pub version: u32,
@@ -48,6 +62,8 @@ pub struct Preferences {
     pub primary_row: String,
     #[serde(default = "default_notification_duration")]
     pub notification_duration: u32,
+    #[serde(default)]
+    pub shortcut_sort: ShortcutSort,
 }
 fn default_primary_column() -> String {
     "left".into()
@@ -69,6 +85,7 @@ impl Default for Preferences {
             primary_column: default_primary_column(),
             primary_row: default_primary_row(),
             notification_duration: default_notification_duration(),
+            shortcut_sort: ShortcutSort::default(),
         }
     }
 }
@@ -128,7 +145,11 @@ fn identifier(value: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 fn validate_preferences(value: &Preferences) -> Result<(), String> {
-    if !matches!(value.primary_column.as_str(), "left" | "right")
+    if !matches!(
+        value.shortcut_sort.column.as_str(),
+        "command" | "binding" | "when" | "source"
+    ) || !matches!(value.shortcut_sort.direction.as_str(), "asc" | "desc")
+        || !matches!(value.primary_column.as_str(), "left" | "right")
         || !matches!(value.primary_row.as_str(), "top" | "bottom")
         || ![0, 3000, 5000, 8000].contains(&value.notification_duration)
         || value.version != 1
@@ -673,6 +694,32 @@ mod tests {
         assert!(validate_preferences(&changed).is_err());
         changed.notification_duration = 5000;
         changed.primary_row = "sideways".into();
+        assert!(validate_preferences(&changed).is_err());
+    }
+    #[test]
+    fn shortcut_sort_defaults_persist_and_reject_invalid_columns() {
+        let fixture = Fixture::new();
+        let config = Configuration::new(fixture.0.clone());
+        let initial = config.load(None).unwrap();
+        assert_eq!(initial.preferences.shortcut_sort.column, "binding");
+        assert_eq!(initial.preferences.shortcut_sort.direction, "asc");
+        let expected = serde_json::to_value(&initial.preferences).unwrap();
+        let mut changed = initial.preferences;
+        changed.shortcut_sort = ShortcutSort {
+            column: "command".into(),
+            direction: "desc".into(),
+        };
+        config
+            .save(
+                "preferences",
+                expected,
+                serde_json::to_value(&changed).unwrap(),
+            )
+            .unwrap();
+        let reloaded = Configuration::new(fixture.0.clone()).load(None).unwrap();
+        assert_eq!(reloaded.preferences.shortcut_sort.column, "command");
+        assert_eq!(reloaded.preferences.shortcut_sort.direction, "desc");
+        changed.shortcut_sort.column = "unknown".into();
         assert!(validate_preferences(&changed).is_err());
     }
 }

@@ -8,6 +8,9 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Highlight the active workspace and creation folder, restore folder selection, and show the destination when creating folders.
+- Organize materials in folders with one subfolder level while keeping original files untouched.
+- Remember shortcut sorting; assigned keybindings appear first by default.
 - Sort keyboard shortcuts by command, keybinding, activation context, or source.
 - Choose the primary split sides; modifier-clicks create or reuse the secondary pane without replacing the primary material.
 - Show operation notifications in bottom toasts, with persistent errors and configurable warning/info duration.
