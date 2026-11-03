@@ -35,8 +35,8 @@ Plain clicks replace only the active pane. Already visible whiteboards receive f
 independent views in multiple panes. Explicit Split commands still create empty panes and retain the
 four-pane limit. Existing whiteboards dragged between panes move instead of opening competing editors.
 
-The two navigation columns share one outer frame. Study panes and Preferences use the same thin borders and small
-rounded corners, without inset editor padding. Sidebar toggles commit one target layout and let CSS interpolate
+The two navigation columns share one outer frame. Navigation, study panes, Preferences, and resize gutters use
+square corners and thin borders, without inset editor padding. Sidebar toggles commit one target layout and let CSS interpolate
 panel widths over 200 ms, avoiding per-frame React layout updates. Manual resizing remains immediate.
 Reduced-motion preferences skip the animation. Rapid toggles reverse from the current width. The work area has a uniform four-pixel outer inset, including
 the left edge of navigation and the space below the title bar. The active pane is marked in the title-bar map; container borders
@@ -159,7 +159,7 @@ Command palettes use the same viewport with upper placement.
 
 ## Text rendering
 
-The settings scrolling element is separate from the rounded frame and has an opaque background without
+The settings scrolling element is separate from its frame and has an opaque background without
 transforms. Shortcut rows use consistent line heights and fixed control widths. Navigation widths settle
 on device-pixel boundaries after dragging.
 
