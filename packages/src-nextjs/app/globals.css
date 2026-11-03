@@ -222,6 +222,22 @@
   border-radius: 5px;
 }
 
+/* WebKit can composite overlay scrollbars above an opaque loading sibling.
+   Hidden overflow remains programmatically scrollable, and the stable gutter
+   keeps PDF geometry unchanged when normal scrolling returns. */
+[data-startup-pending] .locus-pdf-scroll {
+  overflow: hidden;
+}
+[data-startup-pending],
+[data-startup-pending] * {
+  scrollbar-color: transparent transparent;
+}
+[data-startup-pending]::-webkit-scrollbar-thumb,
+[data-startup-pending] *::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-color: transparent;
+}
+
 /* Compact panes render separate top/bottom bars instead of the desktop UI wrapper. */
 .locus-whiteboard[data-controls-visible="false"] .layer-ui__wrapper,
 .locus-whiteboard[data-controls-visible="false"] .App-top-bar,

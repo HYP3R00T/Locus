@@ -2,6 +2,7 @@
 
 import { PenLineIcon } from "lucide-react";
 import { type DragEvent, Fragment, useState } from "react";
+import { useStartupReady } from "@/components/layout/startup-loading";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { PdfReader } from "@/components/workspace/pdf-reader";
@@ -42,6 +43,7 @@ export function StudyArea({
     null,
   );
   const documents = data.library.documents.filter((d) => d.workspaceId === data.workspace?.id);
+  const reportReady = useStartupReady();
   const drawings = data.library.drawings.filter((d) => d.workspaceId === data.workspace?.id);
   const panes = data.layout.columns.flatMap((c) => c.panes);
   return (
@@ -153,6 +155,7 @@ export function StudyArea({
                             key={`${document.workspaceId}:${document.id}:${data.revision}`}
                             document={document}
                             paneId={pane.id}
+                            onReady={(ready) => reportReady(pane.id, ready)}
                             onViewPosition={(source, page, y) =>
                               data.rememberPanePosition(pane.id, source, page, y)
                             }
@@ -167,6 +170,7 @@ export function StudyArea({
                           <Whiteboard
                             key={drawing.id}
                             drawing={drawing}
+                            onReady={(ready) => reportReady(pane.id, ready)}
                             paneId={pane.id}
                             onError={data.reportError}
                           />
