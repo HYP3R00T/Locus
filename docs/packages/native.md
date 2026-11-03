@@ -5,7 +5,7 @@
 Source scope: `packages/src-tauri/`. Follow [shared working rules](../getting-started.md#working-rules).
 This Rust crate owns native integration, trusted file access, and persisted study data.
 
-`src/configuration.rs` owns versioned settings files, stale-write checks, theme validation/imports, and theme-only directory scans.
+`src/configuration.rs` owns versioned settings files, stale-write checks, theme validation, and theme-only directory scans.
 Its commands are consumed by `packages/src-nextjs/lib/configuration.ts` and the configuration provider.
 See [Configuration](../configuration.md) for paths, schemas, migration, and recovery.
 

@@ -25,7 +25,16 @@ an unassigned shortcut is omitted. Ctrl/Command labels follow the platform. The 
 
 The miniature layout in the title bar shows each pane and highlights the active one. Click a cell to focus its pane.
 Drag a non-empty cell onto another pane to swap views, or to an allowed edge to create a split. Materials can also
-be dragged directly from the sidebar. Existing whiteboards move instead of opening competing editors.
+be dragged directly from the sidebar. Ctrl+click a material opens it in the secondary column;
+Ctrl+Shift+click opens it in the secondary row of the active column. Command-click also works on macOS.
+**Settings → Layout** chooses the primary column (left/right) and primary row (top/bottom); the defaults
+are left and top. Modifier-click creates the missing split or replaces the secondary pane, preserving
+its primary sibling. In a two-by-two layout, column targeting uses the corresponding row, or the sole
+row if the other column has not been split. Empty active panes are filled before creating/reusing splits.
+Plain clicks replace only the active pane. Already visible whiteboards receive focus; PDFs can have
+independent views in multiple panes. Explicit Split commands still create empty panes and retain the
+four-pane limit. Existing whiteboards dragged between panes move instead of opening competing editors.
+
 The two navigation columns share one outer frame. Study panes and Preferences use the same thin borders and small
 rounded corners, without inset editor padding. The work area has a uniform four-pixel outer inset, including
 the left edge of navigation and the space below the title bar. The active pane is marked in the title-bar map; container borders
@@ -58,28 +67,28 @@ When the palette is open, its input owns the keyboard. A selected action runs af
 
 Useful defaults include `Mod+\` for a vertical split, `Mod+Shift+\` for a horizontal split,
 `Mod+W` to close a pane, `Alt+ArrowLeft` / `Alt+ArrowRight` for pane focus, `Mod+G` for the PDF page field,
-`Mod+=` / `Mod+-` for PDF zoom, `Alt+W` / `Alt+H` for PDF fitting, and `Alt+P` to show or hide the complete whiteboard interface.
-`Mod` means Control on Linux/Windows and Command on macOS.
+`Mod+=` / `Mod+-` for PDF zoom, `Alt+W` / `Alt+H` for PDF fitting, and `Mod+H` to show or hide the complete whiteboard interface.
+`Mod` means Control on Linux/Windows and Command on macOS. Settings and tooltips resolve shortcut hints
+from the current binding. Explicit custom overrides remain unchanged when defaults change. If a custom
+binding already uses Mod+H, the canvas command keeps Alt+P where available, otherwise remains unassigned.
 
 ## Preferences
 
-Open **Preferences** from the palette or Settings. Commonly Used shows theme and canvas controls; All Settings
-shows every setting. Navigation groups Appearance, Key Bindings, and Canvas under Workbench, with Configuration
-and About under Application. Search starts across all settings; choose a category to narrow the results.
-Search matches titles, descriptions, theme names, and shortcut bindings. The Modified filter uses `@modified`
-to show preferences and shortcuts changed from their defaults. Modified settings have a small left marker.
-Only user settings exist; there are no workspace-level overrides.
+Open **Preferences** from the palette or Settings. Navigation lists Themes, Key Bindings, Layout,
+Whiteboard, Notifications, Configuration Files, and About directly. Settings pages share full-width rows
+and consistent spacing; no aggregate pages or modification stripes are displayed. Search and Modified
+filter the selected category. Navigation counts show matches in other categories while searching.
 
-`lib/settings.ts` owns setting metadata and filtering; shared rows keep titles, descriptions, and controls
-consistent across category pages and search results. Configuration holds folder/reload/file management,
-and About holds application information.
+`lib/settings.ts` owns setting metadata and filtering. Shared rows render labels, descriptions, and controls.
+Configuration Files holds folder/reload/file management; About holds application information.
 Key Bindings lists every registered command, including unassigned ones, in a searchable table with
 Keybinding, When, and Source columns. When describes fixed dispatch scopes (PDF, whiteboard, or application),
 not editable condition expressions. Source distinguishes Default from Custom overrides. Action availability
-still applies. Double-click a row or activate its edit button to record a combination; Enter saves and
+still applies. Click Command, Keybinding, When, or Source headers to sort ascending or descending.
+Unassigned bindings sort after assigned ones. Double-click a row or activate its edit button to record a combination; Enter saves and
 Escape cancels. The editor can remove a binding or reset it to its default. Different PDF and whiteboard
 commands can use the same combination because their scopes do not overlap. Key Bindings search stays within
-shortcuts; general settings search still spans categories. Conflicts are rejected for overlapping scopes.
+shortcuts; settings search stays within its selected category. Conflicts are rejected for overlapping scopes.
 Global printable shortcuts need a modifier
 or a function key, so ordinary typing does not trigger application commands.
 
@@ -92,7 +101,7 @@ correct the files and use Reload configuration. Legacy browser records remain av
 ## Excalidraw controls
 
 The Library trigger and sidebar remain hidden. **Toggle Canvas Controls** occupies a fixed title-bar slot left of
-the pane map. It is also available in the palette, Canvas preferences, or with `Alt+P` while a whiteboard is active.
+the pane map. It is also available in the palette, Whiteboard preferences, or with `Mod+H` while a whiteboard is active.
 It hides or shows the whole Excalidraw UI layer: toolbar, properties, menus, zoom, undo/redo, help, and save status.
 The drawing canvas and its content remain available. Menus and dialogs close when the controls are hidden.
 
@@ -144,3 +153,13 @@ on Windows hardware.
 
 Whiteboard files load from a mounted effect. Results from cancelled loads are ignored; a failed load offers a retry
 and never opens an empty editable canvas that could overwrite the original drawing.
+
+## Notifications
+
+A shared shadcn Base UI toaster displays operation failures at the bottom right without changing pane size.
+Errors have no timeout and include a manual close button. Warnings, information, and future success messages
+use **Settings → Notifications → Notification Duration**: 3 seconds (default), 5 seconds, 8 seconds, or until
+dismissed. Hover/focus pauses automatic dismissal. Preview notification exercises the current duration.
+One notice is emitted per source/message change, avoiding repeats during rerenders or theme previews.
+Field-validation messages stay beside their fields, and unavailable-document surfaces keep their local
+recovery controls. There is no automatic success toast for every drawing autosave.

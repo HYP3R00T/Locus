@@ -40,7 +40,7 @@ export const COMMANDS = [
     id: "drawing.controls",
     title: "Whiteboard: Toggle Canvas Controls",
     scope: "drawing",
-    binding: "Alt+P",
+    binding: "Mod+H",
   },
 ] as const satisfies readonly { id: string; title: string; scope: CommandScope; binding: string }[];
 export type CommandId = (typeof COMMANDS)[number]["id"];
@@ -67,6 +67,33 @@ export function shortcutWhen(id: CommandId): string {
   if (command?.scope === "drawing") return "Whiteboard pane active";
   if (id === "palette" || id === "pane.close") return "Anywhere in Locus";
   return "Outside text fields · command palette closed";
+}
+export type ShortcutSort = "command" | "binding" | "when" | "source";
+export function sortedCommands(
+  preferences: Preferences,
+  mac: boolean,
+  column: ShortcutSort,
+  direction: "asc" | "desc",
+) {
+  function value(command: (typeof COMMANDS)[number]) {
+    if (column === "binding")
+      return platformBinding(bindingFor(command.id, preferences), mac) ?? "";
+    if (column === "when") return shortcutWhen(command.id);
+    if (column === "source")
+      return Object.hasOwn(preferences.keybindings, command.id) ? "Custom" : "Default";
+    return command.title;
+  }
+  return [...COMMANDS].sort((a, b) => {
+    const av = value(a),
+      bv = value(b);
+    // Keep unassigned and disabled shortcuts after assigned ones in either direction.
+    if (column === "binding" && (!av || !bv) && av !== bv) return av ? -1 : 1;
+    return (
+      (direction === "asc" ? 1 : -1) *
+        av.localeCompare(bv, undefined, { sensitivity: "base", numeric: true }) ||
+      a.title.localeCompare(b.title)
+    );
+  });
 }
 export function commandsForScope(scope: CommandScope | null) {
   return COMMANDS.filter((command) => command.scope === "global" || command.scope === scope);
@@ -218,6 +245,19 @@ export function parsePreferences(raw: string, mac = false): Preferences {
     whiteboardControlsVisible: parsed.version === 1 ? true : parsed.whiteboardControlsVisible,
     keybindings,
   };
+  if (
+    keybindings["drawing.controls"] === undefined &&
+    bindingProblem(
+      "drawing.controls",
+      bindingFor("drawing.controls", preferences),
+      preferences,
+      mac,
+    )
+  ) {
+    keybindings["drawing.controls"] = bindingProblem("drawing.controls", "Alt+P", preferences, mac)
+      ? ""
+      : "Alt+P";
+  }
   for (const command of COMMANDS) {
     const problem = bindingProblem(
       command.id,

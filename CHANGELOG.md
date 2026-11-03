@@ -8,13 +8,17 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Sort keyboard shortcuts by command, keybinding, activation context, or source.
+- Choose the primary split sides; modifier-clicks create or reuse the secondary pane without replacing the primary material.
+- Show operation notifications in bottom toasts, with persistent errors and configurable warning/info duration.
+- Open sidebar materials in a secondary column with Ctrl+click or a secondary row with Ctrl+Shift+click.
 - Browse shortcuts in a compact table showing commands, bindings, activation contexts, and default/custom sources; double-click to edit.
 - Customize individual interface color tokens with complete, copyable light/dark theme files; missing colors inherit defaults.
 - Add or edit a theme JSON in the configuration folder and see it appear automatically while Locus is open.
 - Choose themes from a compact command-palette picker, starting on your current theme with live previews as you browse. Enter saves; Escape restores the saved theme.
-- Search settings across grouped Workbench and Application categories, with Commonly Used and Modified views.
+- Browse full-width settings pages with direct category navigation and a Modified filter.
 - Keep preferences and key bindings in portable configuration files, migrating existing settings without replacing native files.
-- Choose grouped light/dark palettes, import custom theme JSON, and reload or open the configuration folder from Settings.
+- Choose grouped light/dark palettes, add custom theme JSON files, and reload or open the configuration folder from Settings.
 - Include Default Light/Dark, Catppuccin Mocha, Nord, Dracula, and Tokyo Night interface palettes.
 - Show action hints and current keyboard shortcuts in tooltips on navigation, title-bar, and PDF controls.
 - Restore the main window's size and maximized state between sessions, with position restoration where supported.

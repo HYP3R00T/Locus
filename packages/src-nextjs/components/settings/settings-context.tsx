@@ -14,6 +14,9 @@ export function useSettingsCatalog() {
     theme: appearance.theme,
     controlsVisible: preferences.whiteboardControlsVisible,
     directory,
+    primaryColumn: appearance.primaryColumn,
+    primaryRow: appearance.primaryRow,
+    notificationDuration: appearance.notificationDuration,
     shortcuts: COMMANDS.map((command) => ({
       ...command,
       binding: bindingFor(command.id, preferences).replace("Mod", mac ? "Command" : "Ctrl"),

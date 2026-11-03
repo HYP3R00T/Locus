@@ -198,10 +198,10 @@ The sidebar colors, spacing, and tree connectors follow Console. Container frame
 Right-click the study tree or use **New Whiteboard** in the command palette to create an Excalidraw whiteboard. Whiteboards autosave as standard
 `.excalidraw` files and reopen from the tree. Normal window closing waits for saves; failed saves keep the window open.
 The title bar also offers a pane map, split controls, and the command palette (Ctrl+Shift+P, or Command+Shift+P on macOS).
-Preferences has searchable Workbench and Application groups, Commonly Used, and a Modified filter. Key Bindings offers shortcut recording,
+Preferences has searchable categories and a Modified filter. Key Bindings offers shortcut recording,
 conflict checks, and per-command reset. Ctrl+W (Command+W on macOS) closes the active pane; the last one becomes empty.
 PDF scrollbars reserve their own lane; fit-to-width suppresses transient horizontal scrollbars during resizing.
-Excalidraw Library is hidden. Alt+P toggles the full canvas interface, including tools, properties, and footer controls. See [Workbench](workbench.md) for command scopes and preferences.
+Excalidraw Library is hidden. Ctrl+H (Command+H on macOS) toggles the full canvas interface, including tools, properties, and footer controls. See [Workbench](workbench.md) for command scopes and preferences.
 PDF pins, typed-note editing, and top-bar resizing remain planned.
 
 Excalidraw loads only on the client, following its Next.js integration. The root npm overrides constrain

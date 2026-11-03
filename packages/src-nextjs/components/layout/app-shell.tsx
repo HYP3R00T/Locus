@@ -47,12 +47,13 @@ import {
 import { StudyArea } from "@/components/workspace/study-area";
 import { type Removal, StudyTree } from "@/components/workspace/study-tree";
 import { useLibrary } from "@/components/workspace/use-library";
+import { useNotice } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const data = useLibrary();
   const [view, setView] = useState<"workspace" | "settings">("workspace");
-  const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("common");
+  const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("appearance");
   const [settingsQuery, setSettingsQuery] = useState("");
   const [navigationExpanded, setNavigationExpanded] = useState(false);
   const [contextExpanded, setContextExpanded] = useState(true);
@@ -238,14 +239,15 @@ export function AppShell() {
       }}
     />
   );
+  useNotice(data.error, "Could not complete the library operation");
   const tree = (
     <StudyTree
       library={data.library}
       workspace={data.workspace}
       selectedId={data.selected?.id ?? data.selectedDrawing?.id}
       disabled={data.busy || !data.ready || !data.native}
-      onSelect={(item) => {
-        data.select(item.id);
+      onSelect={(item, target) => {
+        data.select(item.id, target);
         setView("workspace");
         setMobileOpen(false);
       }}
@@ -256,8 +258,8 @@ export function AppShell() {
       onAddDrawing={() => {
         void data.createDrawing();
       }}
-      onSelectDrawing={(id) => {
-        data.openDrawing(id);
+      onSelectDrawing={(id, target) => {
+        data.openDrawing(id, target);
         setView("workspace");
         setMobileOpen(false);
       }}
@@ -443,23 +445,6 @@ export function AppShell() {
               Open the Locus desktop app to access your workspaces, PDFs, and local files.
             </p>
           )}
-          {data.error && (
-            <div
-              role="alert"
-              className="flex items-center gap-2 border-b px-4 py-2 text-xs text-destructive"
-            >
-              <span>{data.error}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  void data.mutate({ type: "list" });
-                }}
-              >
-                Retry
-              </Button>
-            </div>
-          )}
           <main
             className={cn(
               "min-h-0 min-w-0 flex-1",
@@ -474,7 +459,6 @@ export function AppShell() {
                   section={preferenceSection}
                   query={settingsQuery}
                   onQueryChange={setSettingsQuery}
-                  onSectionChange={setPreferenceSection}
                 />
               </div>
             ) : (
@@ -550,11 +534,6 @@ export function AppShell() {
               maxLength={120}
               className="mb-4 h-9 w-full border bg-background px-3"
             />
-            {data.error && (
-              <p role="alert" className="mb-3 text-destructive">
-                {data.error}
-              </p>
-            )}
             <DialogFooter>
               <Button
                 type="button"
@@ -616,11 +595,6 @@ export function AppShell() {
               onChange={(e) => setTitle(e.target.value)}
               className="mb-4 h-9 w-full border bg-background px-3"
             />
-            {data.error && (
-              <p role="alert" className="mb-3 text-destructive">
-                {data.error}
-              </p>
-            )}
             <DialogFooter>
               <Button
                 type="button"
@@ -657,11 +631,6 @@ export function AppShell() {
               Original PDF files stay on your device.
             </DialogDescription>
           </DialogHeader>
-          {data.error && (
-            <p role="alert" className="text-destructive">
-              {data.error}
-            </p>
-          )}
           <DialogFooter>
             <Button variant="ghost" disabled={data.busy} onClick={() => setRemoval(null)}>
               Cancel

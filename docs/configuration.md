@@ -27,7 +27,7 @@ locus/
     tokyo-night.json
 ```
 
-**Settings → Configuration → Open config folder** opens this location. No broad frontend filesystem permission
+**Settings → Configuration Files → Open config folder** opens this location. No broad frontend filesystem permission
 is granted. The Window State plugin continues to maintain its own `.window-state.json` under Tauri's
 identifier-based application-config directory; logs and study data also keep their existing locations.
 
@@ -41,7 +41,10 @@ identifier-based application-config directory; logs and study data also keep the
     "theme": "system",
     "lightTheme": "default-light",
     "darkTheme": "default-dark",
-    "whiteboardControlsVisible": true
+    "whiteboardControlsVisible": true,
+    "primaryColumn": "left",
+    "primaryRow": "top",
+    "notificationDuration": 3000
 }
 ```
 
@@ -49,6 +52,12 @@ identifier-based application-config directory; logs and study data also keep the
 theme. Follow system chooses between `lightTheme` and `darkTheme`. The title-bar toggle switches between
 the remembered pair. Missing or mismatched themes fall back to the default mode with an Appearance warning;
 the stored selection is preserved.
+
+`primaryColumn` is `left` or `right`; `primaryRow` is `top` or `bottom`. Modifier-clicks target the
+other side; these preferences do not lock ordinary pane selection. `notificationDuration` accepts 3000,
+5000, 8000 milliseconds, or 0 for manual dismissal. Errors always use manual dismissal independently.
+Older files missing these fields receive defaults when loaded. Saves normalize those missing defaults
+before stale-write comparison, preserving detection of actual external changes.
 
 `keybindings.json` has an independent version and contains only overrides:
 
@@ -72,8 +81,7 @@ than silently resetting them; existing complete native configuration remains usa
 
 ## Add or edit a theme
 
-Use **Appearance → Import theme** to select a Locus theme JSON file, or place one in `themes/` and choose
-**Configuration → Reload configuration**. The Appearance selector and the command palette's **Preferences:
+Place a theme JSON file in `themes/`; no import step is required. The Themes selector and the command palette's **Preferences:
 Color Theme** picker group files by their `mode` field. While Locus is visible, theme files are
 checked every two seconds and on window focus. Adding, editing, or removing a JSON file updates the
 selectors and active palette without a restart. This bounded, native theme-only scan does not read
@@ -146,8 +154,7 @@ Bundled palettes are Locus adaptations of [Catppuccin](https://github.com/catppu
 and [Tokyo Night](https://github.com/folke/tokyonight.nvim). They are not official ports. The default palette
 files live individually in `packages/src-nextjs/lib/themes/`. Their index supplies frontend previews;
 Rust embeds the same JSON files when installing defaults. Unchanged earlier bundled templates (the eight-role and 33-token formats) are
-expanded to the complete format on configuration load. Edited or custom files are preserved. Importing an existing ID is rejected; use a new
-ID for a variant or edit the existing file explicitly.
+expanded to the complete format on configuration load. Edited or custom files are preserved. Use a new ID for a variant or edit the existing file explicitly.
 
 ## Validation and recovery
 

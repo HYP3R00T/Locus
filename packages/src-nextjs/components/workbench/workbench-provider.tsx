@@ -27,6 +27,7 @@ import {
   WorkbenchContext,
   type WorkbenchInfo,
 } from "@/components/workbench/workbench-context";
+import { useNotice } from "@/lib/notifications";
 import {
   bindingFor,
   COMMAND_GROUPS,
@@ -202,6 +203,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", keydown, true);
     return () => window.removeEventListener("keydown", keydown, true);
   }, []);
+  useNotice(commandError, "Command failed");
   return (
     <WorkbenchContext.Provider
       value={{
@@ -222,14 +224,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {commandError && (
-        <div
-          role="alert"
-          className="fixed right-4 bottom-4 z-50 max-w-sm border bg-background p-3 text-xs text-destructive"
-        >
-          {commandError}
-        </div>
-      )}
       <Dialog
         onOpenChangeComplete={(visible) => {
           if (!visible) {

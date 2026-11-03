@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useWorkbench } from "@/components/workbench/workbench-context";
 import { readDrawing, registerDrawingWriter, saveDrawing } from "@/lib/drawings";
 import type { Drawing } from "@/lib/library";
+import { useNotice } from "@/lib/notifications";
 
 export function WhiteboardEditor({
   drawing,
@@ -100,6 +101,7 @@ export function WhiteboardEditor({
       unregister();
     };
   }, []);
+  useNotice(loadError, "Could not open the whiteboard");
   return (
     <div
       data-whiteboard-id={paneId}
@@ -111,7 +113,7 @@ export function WhiteboardEditor({
           role="alert"
           className="flex h-full flex-col items-center justify-center gap-3 p-4 text-xs"
         >
-          <p>{loadError}</p>
+          <p>This whiteboard is unavailable. Retry to load it again.</p>
           <Button variant="outline" onClick={() => setLoadAttempt((value) => value + 1)}>
             Retry whiteboard
           </Button>
