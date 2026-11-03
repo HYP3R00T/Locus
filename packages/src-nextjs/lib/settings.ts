@@ -1,19 +1,20 @@
 export const SETTINGS_SECTIONS = [
-  { id: "appearance", title: "Appearance", group: "Workbench" },
-  { id: "keybindings", title: "Key Bindings", group: "Workbench" },
-  { id: "canvas", title: "Canvas", group: "Workbench" },
-  { id: "configuration", title: "Configuration", group: "Application" },
-  { id: "about", title: "About", group: "Application" },
+  { id: "appearance", title: "Themes" },
+  { id: "keybindings", title: "Key Bindings" },
+  { id: "layout", title: "Layout" },
+  { id: "canvas", title: "Whiteboard" },
+  { id: "notifications", title: "Notifications" },
+  { id: "configuration", title: "Configuration Files" },
+  { id: "about", title: "About" },
 ] as const;
 export type SettingsCategory = (typeof SETTINGS_SECTIONS)[number]["id"];
-export type PreferenceSection = SettingsCategory | "all" | "common";
+export type PreferenceSection = SettingsCategory;
 export type SettingDefinition = {
   id: string;
   section: SettingsCategory;
   title: string;
   description: string;
   keywords?: string[];
-  common?: boolean;
   modified?: boolean;
 };
 export function settingsCatalog(input: {
@@ -21,9 +22,39 @@ export function settingsCatalog(input: {
   theme: string;
   controlsVisible: boolean;
   directory: string | null;
+  primaryColumn?: "left" | "right";
+  primaryRow?: "top" | "bottom";
+  notificationDuration?: number;
   shortcuts: { id: string; title: string; scope: string; binding: string; modified: boolean }[];
 }): SettingDefinition[] {
   return [
+    {
+      id: "layout.primaryColumn",
+      section: "layout",
+      title: "Primary Column",
+      description:
+        "Ctrl+click creates or replaces the other column. Plain clicks still replace the active pane. With two rows, the corresponding row is used.",
+      keywords: ["split", "vertical", "left", "right"],
+      modified: (input.primaryColumn ?? "left") !== "left",
+    },
+    {
+      id: "layout.primaryRow",
+      section: "layout",
+      title: "Primary Row",
+      description:
+        "Ctrl+Shift+click creates or replaces the other row in the active column. Empty active panes are filled before splitting.",
+      keywords: ["split", "horizontal", "top", "bottom"],
+      modified: (input.primaryRow ?? "top") !== "top",
+    },
+    {
+      id: "notifications.duration",
+      section: "notifications",
+      title: "Notification Duration",
+      description:
+        "Dismiss warnings and informational messages after this interval. Errors always stay until you dismiss them. Hover or focus pauses the timer.",
+      keywords: ["toast", "error", "warning", "timeout"],
+      modified: (input.notificationDuration ?? 3000) !== 3000,
+    },
     {
       id: "appearance.theme",
       section: "appearance",
@@ -31,16 +62,7 @@ export function settingsCatalog(input: {
       description:
         "Choose the interface colors. Follow system uses your preferred light and dark themes.",
       keywords: ["palette", "system", "color", ...input.themeNames],
-      common: true,
       modified: input.theme !== "system",
-    },
-    {
-      id: "appearance.import",
-      section: "appearance",
-      title: "Custom Themes",
-      description:
-        "Import a Locus theme JSON file. Use Configuration to manage and reload theme files.",
-      keywords: ["import", "json", "palette"],
     },
     {
       id: "canvas.controls",
@@ -48,7 +70,6 @@ export function settingsCatalog(input: {
       title: "Show Canvas Controls",
       description: "Show drawing tools, properties, menus, zoom, and undo/redo on whiteboards.",
       keywords: ["whiteboard", "Excalidraw", "drawing", "pen", "interface"],
-      common: true,
       modified: !input.controlsVisible,
     },
     {
@@ -111,7 +132,6 @@ export function settingMatches(setting: SettingDefinition, query: string) {
     setting.title,
     setting.description,
     section?.title,
-    section?.group,
     ...(setting.keywords ?? []),
   ]
     .join(" ")
@@ -123,9 +143,5 @@ export function settingsInScope(
   scope: PreferenceSection,
   query: string,
 ) {
-  return settings.filter(
-    (setting) =>
-      (scope === "all" || (scope === "common" ? setting.common : setting.section === scope)) &&
-      settingMatches(setting, query),
-  );
+  return settings.filter((setting) => setting.section === scope && settingMatches(setting, query));
 }

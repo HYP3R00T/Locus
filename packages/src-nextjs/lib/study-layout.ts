@@ -1,3 +1,11 @@
+export type MaterialOpenTarget = "active" | "right" | "bottom";
+export function materialOpenTarget(event: {
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}): MaterialOpenTarget {
+  return event.ctrlKey || event.metaKey ? (event.shiftKey ? "bottom" : "right") : "active";
+}
 export type ReadingPosition = { pageIndex: number; y: number; positionVersion: number };
 export type PaneContent = { kind: "pdf" | "drawing"; id: string };
 export type DropZone = "center" | "left" | "right" | "top" | "bottom";
@@ -13,6 +21,14 @@ export type StudyLayoutAction =
   | { type: "replace"; layout: StudyLayout }
   | { type: "activate"; paneId: string }
   | { type: "open"; content: PaneContent }
+  | {
+      type: "openSplit";
+      content: PaneContent;
+      target: "right" | "bottom";
+      id: string;
+      primaryColumn?: "left" | "right";
+      primaryRow?: "top" | "bottom";
+    }
   | {
       type: "drop";
       targetId: string;
@@ -51,6 +67,49 @@ export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutActio
       return layout.columns.some((c) => c.panes.some((p) => p.id === action.paneId))
         ? { ...layout, activeId: action.paneId }
         : layout;
+    case "openSplit": {
+      // A whiteboard has one live editor. Focus it instead of duplicating or moving it.
+      if (
+        action.content.kind === "drawing" &&
+        layout.columns.some((c) =>
+          c.panes.some((p) => p.content?.kind === "drawing" && p.content.id === action.content.id),
+        )
+      )
+        return studyLayoutReducer(layout, { type: "open", content: action.content });
+      if (!active.content)
+        return studyLayoutReducer(layout, { type: "open", content: action.content });
+      const vertical = action.target === "right";
+      const secondaryColumn = action.primaryColumn === "right" ? 0 : 1;
+      const secondaryRow = action.primaryRow === "bottom" ? 0 : 1;
+      const destination = vertical
+        ? layout.columns[secondaryColumn]?.panes[
+            Math.min(
+              column.panes.indexOf(active),
+              (layout.columns[secondaryColumn]?.panes.length ?? 1) - 1,
+            )
+          ]
+        : column.panes[secondaryRow];
+      const hasSplit = vertical ? layout.columns.length === 2 : column.panes.length === 2;
+      if (hasSplit && destination) {
+        return studyLayoutReducer(
+          { ...layout, activeId: destination.id },
+          { type: "open", content: action.content },
+        );
+      }
+      return studyLayoutReducer(layout, {
+        type: "drop",
+        targetId: active.id,
+        content: action.content,
+        id: action.id,
+        zone: vertical
+          ? action.primaryColumn === "right"
+            ? "left"
+            : "right"
+          : action.primaryRow === "bottom"
+            ? "top"
+            : "bottom",
+      });
+    }
     case "open": {
       const existing =
         action.content.kind === "drawing"

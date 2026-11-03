@@ -52,4 +52,7 @@ input devices, or save recovery. There is no separate frontend behavior-test com
 Update this guide for local ownership changes, workbench/storage for behavior, and the public guide for usage changes.
 
 Settings metadata and search live in `lib/settings.ts`. Shared settings rows render the same controls in
-Commonly Used, category pages, and global search; navigation groups Workbench and Application settings.
+category pages and filtered results. Navigation is a flat list of implemented setting categories.
+
+Use the shared `components/ui/checkbox` for standalone checkbox controls. Menu checkbox items keep their
+existing Base UI menu primitives so menu keyboard behavior is preserved.

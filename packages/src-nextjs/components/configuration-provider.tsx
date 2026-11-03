@@ -31,10 +31,12 @@ type ConfigurationContextValue = {
   writable: boolean;
   error: string | null;
   updatePreferences: (value: Preferences) => Promise<void>;
+  updateAppearance: (
+    value: Partial<Pick<Appearance, "primaryColumn" | "primaryRow" | "notificationDuration">>,
+  ) => Promise<boolean>;
   selectTheme: (id: string) => Promise<boolean>;
   previewTheme: (id: string | null) => void;
   reload: () => Promise<void>;
-  importTheme: () => Promise<void>;
   openDirectory: () => Promise<void>;
 };
 const Context = createContext<ConfigurationContextValue | null>(null);
@@ -243,20 +245,6 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
       ...(theme?.mode === "dark" ? { darkTheme: id } : theme ? { lightTheme: id } : {}),
     });
   }
-  async function importTheme() {
-    if (saving.current || !native.current) return;
-    saving.current = true;
-    setBusy(true);
-    try {
-      const updated = await configuration.importTheme();
-      if (updated) accept(updated);
-    } catch (reason) {
-      setError(String(reason));
-    } finally {
-      saving.current = false;
-      setBusy(false);
-    }
-  }
   async function openDirectory() {
     try {
       await configuration.openDirectory();
@@ -285,10 +273,13 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
         writable: ready && !!snapshot && !busy,
         error,
         updatePreferences,
+        updateAppearance: (value) =>
+          live.current
+            ? change("preferences", { ...live.current.preferences, ...value })
+            : Promise.resolve(false),
         selectTheme,
         previewTheme: setPreview,
         reload,
-        importTheme,
         openDirectory,
       }}
     >

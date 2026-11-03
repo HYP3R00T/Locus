@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSettingsView } from "@/components/settings/settings-context";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,9 @@ import {
   COMMANDS,
   type CommandId,
   eventBinding,
+  type ShortcutSort,
   shortcutWhen,
+  sortedCommands,
 } from "@/lib/workbench";
 
 function Keybinding({ value, mac }: { value: string; mac: boolean }) {
@@ -49,6 +51,10 @@ export function KeyboardShortcutsSettings() {
     setRecording,
     mac,
   } = useWorkbench();
+  const [sort, setSort] = useState<{ column: ShortcutSort; direction: "asc" | "desc" }>({
+    column: "command",
+    direction: "asc",
+  });
   const [editingId, setEditingId] = useState<CommandId | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -91,53 +97,97 @@ export function KeyboardShortcutsSettings() {
           <caption className="sr-only">Keyboard shortcuts and their activation contexts</caption>
           <thead className="border-b bg-muted/30">
             <tr>
-              {["Command", "Keybinding", "When", "Source", ""].map((title) => (
-                <th key={title} scope="col" className="px-3 py-2 font-medium">
-                  {title || <span className="sr-only">Edit</span>}
+              {(
+                [
+                  ["command", "Command"],
+                  ["binding", "Keybinding"],
+                  ["when", "When"],
+                  ["source", "Source"],
+                ] as const
+              ).map(([column, title]) => (
+                <th
+                  key={column}
+                  scope="col"
+                  aria-sort={
+                    sort.column === column
+                      ? sort.direction === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                  className="px-3 py-2 font-medium"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto gap-1 px-0 py-0"
+                    aria-label={`Sort by ${title}`}
+                    onClick={() =>
+                      setSort((current) => ({
+                        column,
+                        direction:
+                          current.column === column && current.direction === "asc" ? "desc" : "asc",
+                      }))
+                    }
+                  >
+                    {title}
+                    {sort.column !== column ? (
+                      <ArrowUpDownIcon />
+                    ) : sort.direction === "asc" ? (
+                      <ArrowUpIcon />
+                    ) : (
+                      <ArrowDownIcon />
+                    )}
+                  </Button>
                 </th>
               ))}
+              <th scope="col">
+                <span className="sr-only">Edit</span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {COMMANDS.filter((command) => visible.has(`shortcut.${command.id}`)).map((command) => {
-              const binding = bindingFor(command.id, preferences);
-              const custom = Object.hasOwn(preferences.keybindings, command.id);
-              return (
-                <tr
-                  key={command.id}
-                  className="group border-b border-border/50 even:bg-muted/15 focus-within:bg-accent hover:bg-accent"
-                  onDoubleClick={() => edit(command.id)}
-                >
-                  <td className="px-3 py-2">
-                    <span className="font-medium">{command.title}</span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {!binding && custom ? (
-                      <span className="text-muted-foreground">Disabled</span>
-                    ) : (
-                      <Keybinding value={binding} mac={mac} />
-                    )}
-                  </td>
-                  <td className="max-w-64 px-3 py-2 text-muted-foreground">
-                    {shortcutWhen(command.id)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {custom ? "Custom" : "Default"}
-                  </td>
-                  <td className="px-2 py-1">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={disabled}
-                      aria-label={`Edit shortcut for ${command.title}`}
-                      onClick={() => edit(command.id)}
-                    >
-                      <PencilIcon />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
+            {sortedCommands(preferences, mac, sort.column, sort.direction)
+              .filter((command) => visible.has(`shortcut.${command.id}`))
+              .map((command) => {
+                const binding = bindingFor(command.id, preferences);
+                const custom = Object.hasOwn(preferences.keybindings, command.id);
+                return (
+                  <tr
+                    key={command.id}
+                    className="group border-b border-border/50 even:bg-muted/15 focus-within:bg-accent hover:bg-accent"
+                    onDoubleClick={() => edit(command.id)}
+                  >
+                    <td className="px-3 py-2">
+                      <span className="font-medium">{command.title}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {!binding && custom ? (
+                        <span className="text-muted-foreground">Disabled</span>
+                      ) : (
+                        <Keybinding value={binding} mac={mac} />
+                      )}
+                    </td>
+                    <td className="max-w-64 px-3 py-2 text-muted-foreground">
+                      {shortcutWhen(command.id)}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {custom ? "Custom" : "Default"}
+                    </td>
+                    <td className="px-2 py-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={disabled}
+                        aria-label={`Edit shortcut for ${command.title}`}
+                        onClick={() => edit(command.id)}
+                      >
+                        <PencilIcon />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>

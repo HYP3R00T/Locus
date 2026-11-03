@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useConfiguration } from "@/components/configuration-provider";
 import { flushDrawings } from "@/lib/drawings";
 import {
   attachPdf,
@@ -14,6 +15,7 @@ import {
   activeStudyPane,
   createStudyLayout,
   type DropZone,
+  type MaterialOpenTarget,
   type PaneContent,
   type ReadingPosition,
   type StudyPane,
@@ -21,6 +23,7 @@ import {
 } from "@/lib/study-layout";
 
 export function useLibrary() {
+  const { appearance } = useConfiguration();
   const [library, setLibrary] = useState<Library>(emptyLibrary);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [layout, dispatchLayout] = useReducer(studyLayoutReducer, undefined, createStudyLayout);
@@ -34,8 +37,8 @@ export function useLibrary() {
     positions.current.clear();
     dispatchLayout({ type: "reset" });
   }
-  function select(documentId: string) {
-    dispatchLayout({ type: "open", content: { kind: "pdf", id: documentId } });
+  function select(documentId: string, target: MaterialOpenTarget = "active") {
+    openMaterial({ kind: "pdf", id: documentId }, target);
   }
   const [ready, setReady] = useState(false);
   const [native, setNative] = useState(false);
@@ -186,10 +189,26 @@ export function useLibrary() {
     positions.current.delete(paneId);
     dispatchLayout(action);
   }
-  function openDrawing(id: string) {
-    const next = studyLayoutReducer(layout, { type: "open", content: { kind: "drawing", id } });
+  function openMaterial(content: PaneContent, target: MaterialOpenTarget) {
+    const action =
+      target === "active"
+        ? { type: "open" as const, content }
+        : {
+            type: "openSplit" as const,
+            content,
+            target,
+            primaryColumn: appearance.primaryColumn,
+            primaryRow: appearance.primaryRow,
+            id: crypto.randomUUID(),
+          };
+    const next = studyLayoutReducer(layout, action);
+    setError(null);
+    persistPanePosition(activeId.current);
     activeId.current = next.activeId;
-    dispatchLayout({ type: "open", content: { kind: "drawing", id } });
+    dispatchLayout(action);
+  }
+  function openDrawing(id: string, target: MaterialOpenTarget = "active") {
+    openMaterial({ kind: "drawing", id }, target);
   }
   async function createDrawing() {
     if (!workspaceId) return;

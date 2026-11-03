@@ -54,29 +54,6 @@ async fn save_configuration(
 }
 
 #[tauri::command]
-async fn import_theme(
-    app: tauri::AppHandle,
-    config: State<'_, Config>,
-) -> Result<Option<configuration::ConfigurationSnapshot>, String> {
-    let config = config.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let Some(file) = app
-            .dialog()
-            .file()
-            .add_filter("Locus theme", &["json"])
-            .blocking_pick_file()
-        else {
-            return Ok(None);
-        };
-        config.import_theme(&file.into_path().map_err(|e| e.to_string())?)?;
-        config.load(None).map(Some)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .inspect_err(|_| log::warn!("Could not import theme"))
-}
-
-#[tauri::command]
 async fn open_configuration_directory(
     app: tauri::AppHandle,
     config: State<'_, Config>,
@@ -235,7 +212,6 @@ pub fn run() {
             load_configuration,
             read_themes,
             save_configuration,
-            import_theme,
             open_configuration_directory,
             library_action,
             attach_pdf,

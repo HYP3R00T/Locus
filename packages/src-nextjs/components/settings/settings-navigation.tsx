@@ -15,17 +15,13 @@ export function SettingsNavigation({
   onSelect: (section: PreferenceSection) => void;
 }) {
   const definitions = useSettingsCatalog();
-  function item(id: PreferenceSection, title: string, nested = false) {
+  function item(id: PreferenceSection, title: string) {
     const count = settingsInScope(definitions, id, query).length;
     return (
       <NavigationAction
         key={id}
         aria-current={section === id ? "page" : undefined}
-        className={cn(
-          "h-8 gap-2 font-normal",
-          nested && "pl-6",
-          section === id && "bg-sidebar-accent",
-        )}
+        className={cn("h-8 gap-2 font-normal", section === id && "bg-sidebar-accent")}
         onClick={() => onSelect(id)}
       >
         <span className="truncate">{title}</span>
@@ -37,16 +33,7 @@ export function SettingsNavigation({
   }
   return (
     <nav aria-label="Settings categories" className="px-2">
-      {item("common", "Commonly Used")}
-      {item("all", "All Settings")}
-      {(["Workbench", "Application"] as const).map((group) => (
-        <div key={group} className="mt-5">
-          <h3 className="px-3 pb-1 text-[11px] font-medium text-muted-foreground">{group}</h3>
-          {SETTINGS_SECTIONS.filter((section) => section.group === group).map((section) =>
-            item(section.id, section.title, true),
-          )}
-        </div>
-      ))}
+      {SETTINGS_SECTIONS.map((category) => item(category.id, category.title))}
     </nav>
   );
 }

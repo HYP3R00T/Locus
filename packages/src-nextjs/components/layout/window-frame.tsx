@@ -4,11 +4,11 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MinusIcon, SquareIcon, XIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
-
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ActionTooltip } from "@/components/workbench/action-tooltip";
 import { CommandCenter, TitlebarLayoutControls } from "@/components/workbench/titlebar-controls";
 import { flushDrawings } from "@/lib/drawings";
+import { useNotice } from "@/lib/notifications";
 
 const subscribe = () => () => {};
 const browserSnapshot = () => false;
@@ -55,6 +55,7 @@ export function WindowFrame({ children }: { children: ReactNode }) {
     }
   }
 
+  useNotice(error, "Window operation failed");
   return (
     <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background">
       <header
@@ -117,11 +118,6 @@ export function WindowFrame({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
-      {error && (
-        <p role="alert" className="shrink-0 px-3 py-1 text-xs text-destructive">
-          {error}
-        </p>
-      )}
       <div className="min-h-0 flex-1">{children}</div>
     </div>
   );

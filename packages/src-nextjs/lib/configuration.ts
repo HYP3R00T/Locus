@@ -10,6 +10,9 @@ export type Appearance = {
   lightTheme: string;
   darkTheme: string;
   whiteboardControlsVisible: boolean;
+  primaryColumn: "left" | "right";
+  primaryRow: "top" | "bottom";
+  notificationDuration: number;
 };
 export type Keybindings = { version: 1; bindings: Preferences["keybindings"] };
 export type Configuration = {
@@ -25,6 +28,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
   lightTheme: "default-light",
   darkTheme: "default-dark",
   whiteboardControlsVisible: true,
+  primaryColumn: "left",
+  primaryRow: "top",
+  notificationDuration: 3000,
 };
 export function workbenchPreferences(config: Configuration, mac: boolean): Preferences {
   if (
@@ -56,6 +62,5 @@ export const configuration = {
     expected: Appearance | Keybindings,
     value: Appearance | Keybindings,
   ) => invoke<void>("save_configuration", { file, expected, value }),
-  importTheme: () => invoke<Configuration | null>("import_theme"),
   openDirectory: () => invoke<void>("open_configuration_directory"),
 };

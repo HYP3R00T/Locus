@@ -42,6 +42,21 @@ pub struct Preferences {
     pub light_theme: String,
     pub dark_theme: String,
     pub whiteboard_controls_visible: bool,
+    #[serde(default = "default_primary_column")]
+    pub primary_column: String,
+    #[serde(default = "default_primary_row")]
+    pub primary_row: String,
+    #[serde(default = "default_notification_duration")]
+    pub notification_duration: u32,
+}
+fn default_primary_column() -> String {
+    "left".into()
+}
+fn default_primary_row() -> String {
+    "top".into()
+}
+fn default_notification_duration() -> u32 {
+    3000
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -51,6 +66,9 @@ impl Default for Preferences {
             light_theme: "default-light".into(),
             dark_theme: "default-dark".into(),
             whiteboard_controls_visible: true,
+            primary_column: default_primary_column(),
+            primary_row: default_primary_row(),
+            notification_duration: default_notification_duration(),
         }
     }
 }
@@ -110,7 +128,10 @@ fn identifier(value: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 fn validate_preferences(value: &Preferences) -> Result<(), String> {
-    if value.version != 1
+    if !matches!(value.primary_column.as_str(), "left" | "right")
+        || !matches!(value.primary_row.as_str(), "top" | "bottom")
+        || ![0, 3000, 5000, 8000].contains(&value.notification_duration)
+        || value.version != 1
         || !identifier(&value.theme)
         || !identifier(&value.light_theme)
         || !identifier(&value.dark_theme)
@@ -349,25 +370,17 @@ impl Configuration {
             _ => return Err("Unknown configuration file.".into()),
         }
         let path = self.directory.join(format!("{file}.json"));
-        if read_json(&path)? != expected {
+        let stored = read_json(&path)?;
+        let stored = if file == "preferences" {
+            serde_json::to_value(serde_json::from_value::<Preferences>(stored).map_err(error)?)
+                .map_err(error)?
+        } else {
+            stored
+        };
+        if stored != expected {
             return Err("Settings changed on disk. Reload configuration before saving.".into());
         }
         write_json(&path, &value, false)
-    }
-    pub fn import_theme(&self, path: &Path) -> Result<(), String> {
-        let _guard = self.lock.lock().map_err(error)?;
-        let theme: Theme = serde_json::from_value(read_json(path)?).map_err(error)?;
-        validate_theme(&theme)?;
-        let destination = self
-            .directory
-            .join("themes")
-            .join(format!("{}.json", theme.id));
-        if destination.exists() {
-            return Err(
-                "A theme with this ID already exists. Give the imported theme a unique ID.".into(),
-            );
-        }
-        write_json(&destination, &theme, true)
     }
 }
 
@@ -454,27 +467,26 @@ mod tests {
         assert_eq!(config.load(None).unwrap().preferences.theme, "default-dark");
     }
     #[test]
-    fn imports_are_validated_and_duplicate_ids_do_not_replace_files() {
+    fn theme_directory_files_are_validated() {
         let fixture = Fixture::new();
         let config = Configuration::new(fixture.0.clone());
         config.load(None).unwrap();
-        let source = fixture.0.join("import.json");
+        let source = fixture.0.join("themes/custom.json");
         fs::write(
             &source,
             r##"{"id":"custom","name":"Custom","mode":"light","colors":{}}"##,
         )
         .unwrap();
-        config.import_theme(&source).unwrap();
-        assert!(config.import_theme(&source).is_err());
-        assert_eq!(config.load(None).unwrap().themes.len(), 7);
+        assert_eq!(config.read_themes().unwrap().themes.len(), 7);
         fs::write(
             &source,
             r##"{"id":"../escape","name":"Invalid","mode":"dark","colors":{}}"##,
         )
         .unwrap();
-        assert!(config.import_theme(&source).is_err());
         fs::write(fixture.0.join("themes/invalid.json"), "invalid").unwrap();
-        assert_eq!(config.load(None).unwrap().warnings.len(), 1);
+        let loaded = config.read_themes().unwrap();
+        assert_eq!(loaded.themes.len(), 6);
+        assert_eq!(loaded.warnings.len(), 2);
     }
 
     #[test]
@@ -506,9 +518,9 @@ mod tests {
         theme.id = "custom".into();
         theme.mode = "unknown".into();
         assert!(validate_theme(&theme).is_err());
-        let oversized = fixture.0.join("large.json");
+        let oversized = fixture.0.join("themes/large.json");
         fs::write(&oversized, vec![b' '; LIMIT as usize + 1]).unwrap();
-        assert!(config.import_theme(&oversized).is_err());
+        assert_eq!(config.read_themes().unwrap().warnings.len(), 1);
     }
     #[test]
     fn partial_tokens_and_alpha_colors_are_validated() {
@@ -620,5 +632,47 @@ mod tests {
         config.load(None).unwrap();
         let preserved: Theme = serde_json::from_value(read_json(&path).unwrap()).unwrap();
         assert_eq!(preserved.colors, nord.colors);
+    }
+    #[test]
+    fn layout_and_notice_preferences_support_old_files_and_validate_new_values() {
+        let fixture = Fixture::new();
+        let config = Configuration::new(fixture.0.clone());
+        config.load(None).unwrap();
+        let path = fixture.0.join("preferences.json");
+        fs::write(&path, r#"{"version":1,"theme":"system","lightTheme":"default-light","darkTheme":"default-dark","whiteboardControlsVisible":true}"#).unwrap();
+        let loaded = config.load(None).unwrap();
+        assert_eq!(loaded.preferences.primary_column, "left");
+        assert_eq!(loaded.preferences.primary_row, "top");
+        assert_eq!(loaded.preferences.notification_duration, 3000);
+        let expected = serde_json::to_value(&loaded.preferences).unwrap();
+        let mut changed = loaded.preferences;
+        changed.primary_column = "right".into();
+        changed.primary_row = "bottom".into();
+        changed.notification_duration = 0;
+        config
+            .save(
+                "preferences",
+                expected.clone(),
+                serde_json::to_value(&changed).unwrap(),
+            )
+            .unwrap();
+        let roundtrip = config.load(None).unwrap().preferences;
+        assert_eq!(roundtrip.primary_column, "right");
+        assert_eq!(roundtrip.primary_row, "bottom");
+        assert_eq!(roundtrip.notification_duration, 0);
+        assert!(
+            config
+                .save(
+                    "preferences",
+                    expected,
+                    serde_json::to_value(&changed).unwrap()
+                )
+                .is_err()
+        );
+        changed.notification_duration = 1;
+        assert!(validate_preferences(&changed).is_err());
+        changed.notification_duration = 5000;
+        changed.primary_row = "sideways".into();
+        assert!(validate_preferences(&changed).is_err());
     }
 }

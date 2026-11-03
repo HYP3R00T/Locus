@@ -57,7 +57,7 @@ stable IDs identify records. Removing references does not delete original PDFs o
 [Storage](storage.md) owns the detailed schema, file layout, migrations, and removal semantics.
 
 The frontend owns session pane layout, command registration, save queues, and theme application. Rust owns
-versioned preference/key-binding files and validated theme imports; [Configuration](configuration.md) owns
+versioned preference/key-binding files and validated theme loading; [Configuration](configuration.md) owns
 paths, migration, and recovery. [Workbench](workbench.md) owns command scopes and pane behavior. One live editor per
 whiteboard avoids competing writes inside the application. Concurrent external editing is not coordinated.
 

@@ -14,6 +14,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import type { Folder, Library, StudyDocument, Workspace } from "@/lib/library";
+import { type MaterialOpenTarget, materialOpenTarget } from "@/lib/study-layout";
 import { cn } from "@/lib/utils";
 
 export type Removal = {
@@ -40,10 +41,10 @@ export function StudyTree({
   workspace: Workspace | null;
   selectedId?: string;
   disabled: boolean;
-  onSelect: (item: StudyDocument) => void;
+  onSelect: (item: StudyDocument, target?: MaterialOpenTarget) => void;
   onAddPdf: (folderId: string | null) => void;
   onAddDrawing: () => void;
-  onSelectDrawing: (id: string) => void;
+  onSelectDrawing: (id: string, target?: MaterialOpenTarget) => void;
   onAddFolder: () => void;
   onRemove: (item: Removal) => void;
   onRename: (item: Removal) => void;
@@ -110,7 +111,7 @@ export function StudyTree({
           setDragging(null);
           setDropTarget(null);
         }}
-        onClick={() => onSelect(document)}
+        onClick={(event) => onSelect(document, materialOpenTarget(event))}
       >
         <BookOpenIcon />
         <span className="truncate" title={document.path}>
@@ -243,7 +244,7 @@ export function StudyTree({
                     e.dataTransfer.setData("application/x-locus-drawing", drawing.id);
                     e.dataTransfer.effectAllowed = "copy";
                   }}
-                  onClick={() => onSelectDrawing(drawing.id)}
+                  onClick={(event) => onSelectDrawing(drawing.id, materialOpenTarget(event))}
                   className={cn(
                     "min-w-0 cursor-grab gap-2 px-2",
                     selectedId === drawing.id && "bg-sidebar-accent",

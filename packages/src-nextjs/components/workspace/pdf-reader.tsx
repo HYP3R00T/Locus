@@ -16,6 +16,7 @@ import {
 import { ActionTooltip } from "@/components/workbench/action-tooltip";
 import { useCommandHandlers } from "@/components/workbench/workbench-context";
 import { desktop, type StudyDocument } from "@/lib/library";
+import { useNotice } from "@/lib/notifications";
 import { wheelZoomScale } from "@/lib/pdf-interactions";
 
 type FitMode = "page-width" | "page-height";
@@ -350,6 +351,10 @@ export function PdfReader({
     "pdf.fitWidth": { enabled: !!count, run: () => selectZoom("page-width") },
     "pdf.fitHeight": { enabled: !!count, run: () => selectZoom("page-height") },
   });
+  useNotice(error, "Could not open the PDF");
+  useNotice(pageError, "Check the page number", "warning");
+  useNotice(positionError, "Reading position could not be saved");
+  useNotice(linkError, "Could not open the link");
   const matchingPreset = ZOOM_PRESETS.find((scale) => Math.abs(scale - zoom) < 0.0001);
   const selectedZoom =
     zoomPreset ?? (matchingPreset === undefined ? "custom" : String(matchingPreset));
@@ -445,14 +450,9 @@ export function PdfReader({
           </ActionTooltip>
         </div>
       </div>
-      {(pageError || positionError || linkError) && (
-        <p role="alert" className="px-4 py-2 text-xs text-destructive">
-          {pageError || positionError || linkError}
-        </p>
-      )}
       {error && (
         <div role="alert" className="p-6 text-sm">
-          <p>{error}</p>
+          <p>This PDF is unavailable. Locate the file to try again.</p>
           {desktop() && (
             <Button variant="outline" className="mt-3" onClick={onLocate}>
               Locate PDF

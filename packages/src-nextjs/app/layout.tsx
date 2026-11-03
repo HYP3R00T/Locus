@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WindowFrame } from "@/components/layout/window-frame";
+import { Notifications } from "@/components/notifications";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkbenchProvider } from "@/components/workbench/workbench-provider";
@@ -16,11 +17,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <WorkbenchProvider>
-            <TooltipProvider delay={400}>
-              <WindowFrame>{children}</WindowFrame>
-            </TooltipProvider>
-          </WorkbenchProvider>
+          <Notifications>
+            <WorkbenchProvider>
+              <TooltipProvider delay={400}>
+                <WindowFrame>{children}</WindowFrame>
+              </TooltipProvider>
+            </WorkbenchProvider>
+          </Notifications>
         </ThemeProvider>
       </body>
     </html>
