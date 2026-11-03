@@ -11,7 +11,7 @@ See [Configuration](../configuration.md) for paths, schemas, migration, and reco
 
 | Area                                                       | Responsibility                                                      |
 | ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| [Main](../../packages/src-tauri/src/main.rs)               | Platform startup and Linux rendering workaround                     |
+| [Main](../../packages/src-tauri/src/main.rs)               | Platform startup using the default system renderer                  |
 | [Startup](../../packages/src-tauri/src/startup.rs)         | Validated, bounded startup timing                                   |
 | [Library entry](../../packages/src-tauri/src/lib.rs)       | Tauri setup, command handlers, plugin initialization                |
 | [Persistence](../../packages/src-tauri/src/library.rs)     | SQLite access, validation, PDF ranges, relinking, drawing IO, tests |

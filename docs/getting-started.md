@@ -76,12 +76,12 @@ checkout, ask the developer to stop it or use an isolated checkout; do not stop 
 
 ### Linux rendering
 
-Locus disables WebKitGTK's DMA-BUF buffer path at startup to avoid confirmed scroll-position-dependent blur
-in settings and PDFs. Accelerated compositing stays enabled; other platforms are unchanged.
-The workaround also applies to packaged desktop builds. It may cost performance on otherwise unaffected systems.
-
-Explicit environment values take precedence. To test the original DMA-BUF path, start with
-`WEBKIT_DISABLE_DMABUF_RENDERER=0 mise run dev`.
+Locus uses WebKitGTK's default renderer without forcing graphics environment variables.
+An earlier blur workaround forced `WEBKIT_DISABLE_DMABUF_RENDERER=1`, but desktop testing found
+that it made whiteboard drawing lag. Removing that override restored smooth drawing.
+If your shell still exports that variable, unset it before running `mise run dev`.
+For a driver-specific blur investigation, `WEBKIT_DISABLE_DMABUF_RENDERER=1 mise run dev` remains
+an explicit diagnostic option; compare drawing responsiveness as well as text clarity.
 `WEBKIT_DISABLE_COMPOSITING_MODE=1` was used only to diagnose the issue; do not keep that variable set
 for normal development, since it disables accelerated compositing entirely.
 
