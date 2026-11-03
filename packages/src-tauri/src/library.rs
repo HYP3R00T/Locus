@@ -102,6 +102,9 @@ pub enum Action {
     RemoveDrawing {
         drawing_id: String,
     },
+    DeleteDrawing {
+        drawing_id: String,
+    },
     CreateWorkspace {
         title: String,
     },
@@ -248,6 +251,17 @@ impl Library {
             Action::RemoveDrawing { drawing_id } => {
                 // Removing a reference never deletes user-authored drawing files.
                 tx.execute("DELETE FROM drawings WHERE id=?1", [drawing_id]).map_err(err)?;
+            }
+            Action::DeleteDrawing { drawing_id } => {
+                // Resolve only registered IDs, never a caller-supplied filesystem path.
+                // The library mutex also excludes saves until deletion is committed.
+                let path = self.drawing_path(&tx, &drawing_id)?;
+                tx.execute("DELETE FROM drawings WHERE id=?1", [&drawing_id]).map_err(err)?;
+                match std::fs::remove_file(path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(err(error)),
+                }
             }
             Action::CreateWorkspace { title: value } => {
                 tx.execute(
@@ -956,6 +970,105 @@ mod tests {
                 })
                 .is_err()
         );
+    }
+    #[test]
+    fn permanent_drawing_deletion_is_scoped_and_handles_missing_or_unremovable_files() {
+        for mode in ["present", "missing", "directory", "database"] {
+            let fixture = Fixture::new();
+            let store = fixture.store();
+            let w = workspace(&store);
+            let data = store
+                .apply(Action::CreateDrawing {
+                    workspace_id: w.clone(),
+                    title: "Delete me".into(),
+                })
+                .unwrap();
+            let drawing_id = data.drawings[0].id.clone();
+            let path = fixture
+                .0
+                .join("drawings")
+                .join(&w)
+                .join(format!("{drawing_id}.excalidraw"));
+            let original = std::fs::read(&path).unwrap();
+            let unrelated = fixture.0.join("original.pdf");
+            std::fs::write(&unrelated, b"original PDF bytes").unwrap();
+            let data = store
+                .apply(Action::CreateDrawing {
+                    workspace_id: w,
+                    title: "Keep me".into(),
+                })
+                .unwrap();
+            let kept_id = data
+                .drawings
+                .iter()
+                .find(|drawing| drawing.id != drawing_id)
+                .unwrap()
+                .id
+                .clone();
+            let kept = store.read_drawing(&kept_id).unwrap();
+            match mode {
+                "missing" => std::fs::remove_file(&path).unwrap(),
+                "directory" => {
+                    std::fs::remove_file(&path).unwrap();
+                    std::fs::create_dir(&path).unwrap();
+                }
+                "database" => store.db.lock().unwrap().execute_batch(
+                    "CREATE TRIGGER reject_drawing_delete BEFORE DELETE ON drawings BEGIN SELECT RAISE(ABORT, 'test failure'); END;"
+                ).unwrap(),
+                _ => {}
+            }
+            let result = store.apply(Action::DeleteDrawing {
+                drawing_id: drawing_id.clone(),
+            });
+            if mode == "directory" || mode == "database" {
+                assert!(result.is_err());
+                assert!(
+                    store
+                        .apply(Action::List)
+                        .unwrap()
+                        .drawings
+                        .iter()
+                        .any(|drawing| drawing.id == drawing_id)
+                );
+                if mode == "directory" {
+                    assert!(path.is_dir());
+                } else {
+                    assert_eq!(std::fs::read(&path).unwrap(), original);
+                }
+            } else {
+                assert!(
+                    result
+                        .unwrap()
+                        .drawings
+                        .iter()
+                        .all(|drawing| drawing.id != drawing_id)
+                );
+                assert!(!path.exists());
+                assert!(store.read_drawing(&drawing_id).is_err());
+                assert!(
+                    store
+                        .save_drawing(&drawing_id, std::str::from_utf8(&original).unwrap())
+                        .is_err()
+                );
+                assert!(!path.exists());
+            }
+            assert!(
+                store
+                    .apply(Action::DeleteDrawing {
+                        drawing_id: "../../original.pdf".into()
+                    })
+                    .is_err()
+            );
+            assert!(
+                store
+                    .apply(Action::DeleteDrawing {
+                        drawing_id: uuid::Uuid::new_v4().to_string()
+                    })
+                    .is_err()
+            );
+            assert_eq!(std::fs::read(&unrelated).unwrap(), b"original PDF bytes");
+            assert_eq!(store.read_drawing(&kept_id).unwrap(), kept);
+        }
     }
     #[test]
     fn subfolders_and_active_selection_persist_without_losing_materials() {

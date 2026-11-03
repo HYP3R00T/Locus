@@ -43,6 +43,7 @@ export type LibraryAction =
   | { type: "createDrawing"; workspaceId: string; title: string }
   | { type: "renameDrawing"; drawingId: string; title: string }
   | { type: "removeDrawing"; drawingId: string }
+  | { type: "deleteDrawing"; drawingId: string }
   | { type: "createWorkspace"; title: string }
   | {
       type: "updateWorkspace";
