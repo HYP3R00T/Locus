@@ -2,6 +2,7 @@
 
 import { ThemeProvider as NextThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
+import { ConfigurationProvider } from "@/components/configuration-provider";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
@@ -12,7 +13,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       disableTransitionOnChange
       storageKey="locus-theme"
     >
-      {children}
+      <ConfigurationProvider>{children}</ConfigurationProvider>
     </NextThemeProvider>
   );
 }

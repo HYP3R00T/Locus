@@ -59,7 +59,7 @@ export function WindowFrame({ children }: { children: ReactNode }) {
     <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background">
       <header
         data-tauri-drag-region={native || undefined}
-        className="flex h-8 shrink-0 items-center select-none bg-context-surface text-xs"
+        className="flex h-8 shrink-0 items-center select-none bg-titlebar-background text-xs text-titlebar-foreground"
       >
         <div
           data-tauri-drag-region={native || undefined}

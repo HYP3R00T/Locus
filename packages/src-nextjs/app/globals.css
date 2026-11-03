@@ -7,6 +7,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-titlebar-background: var(--titlebar-background);
+  --color-titlebar-foreground: var(--titlebar-foreground);
+  --color-toolbar-background: var(--toolbar-background);
+  --color-toolbar-foreground: var(--toolbar-foreground);
+
   --color-client-surface: var(--client-surface);
   --color-context-surface: var(--context-surface);
   --font-heading: var(--font-sans);
@@ -77,6 +82,13 @@
   --chart-3: oklch(0.442 0.017 285.786);
   --chart-4: oklch(0.37 0.013 285.805);
   --chart-5: oklch(0.274 0.006 286.033);
+  --titlebar-background: var(--context-surface);
+  --titlebar-foreground: var(--foreground);
+  --toolbar-background: var(--background);
+  --toolbar-foreground: var(--foreground);
+  --pane-background: var(--background);
+  --pane-foreground: var(--foreground);
+  --pane-border: var(--border);
   --radius: 0;
   --sidebar: var(--context-surface);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -181,7 +193,9 @@
   border-radius: 6px;
 }
 .locus-study-pane {
-  background: var(--background);
+  border-color: var(--pane-border);
+  color: var(--pane-foreground);
+  background: var(--pane-background);
 }
 
 /* PDF.js sizes pages as content boxes. Preflight's border-box shrinks the
@@ -220,12 +234,12 @@
 
 /* Navigation columns share a single outline, with their resize boundary inside it. */
 .locus-navigation-primary {
-  border: 1px solid var(--border);
+  border: 1px solid var(--sidebar-border);
   border-right: 0;
   border-radius: 6px 0 0 6px;
 }
 .locus-navigation-context {
-  border: 1px solid var(--border);
+  border: 1px solid var(--sidebar-border);
   border-left: 0;
   border-radius: 0 6px 6px 0;
 }
