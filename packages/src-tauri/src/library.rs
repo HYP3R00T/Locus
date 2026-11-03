@@ -33,6 +33,8 @@ pub struct Library {
 pub struct Workspace {
     id: String,
     title: String,
+    icon: Option<String>,
+    icon_color: Option<String>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -97,6 +99,12 @@ pub enum Action {
     },
     CreateWorkspace {
         title: String,
+    },
+    UpdateWorkspace {
+        title: String,
+        workspace_id: String,
+        icon: Option<String>,
+        icon_color: Option<String>,
     },
     RemoveWorkspace {
         workspace_id: String,
@@ -163,7 +171,7 @@ impl Library {
                     .map_err(err)?;
                 tx.commit().map_err(err)?;
             }
-            1..=5 => {}
+            1..=6 => {}
             _ => return Err("This library was created by a newer Locus version.".into()),
         }
         if version < 2 {
@@ -187,6 +195,12 @@ impl Library {
         if version < 5 {
             let tx = db.unchecked_transaction().map_err(err)?;
             tx.execute_batch(include_str!("../migrations/005_navigation_selection.sql"))
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
+        }
+        if version < 6 {
+            let tx = db.unchecked_transaction().map_err(err)?;
+            tx.execute_batch(include_str!("../migrations/006_workspace_appearance.sql"))
                 .map_err(err)?;
             tx.commit().map_err(err)?;
         }
@@ -219,7 +233,7 @@ impl Library {
             }
             Action::CreateWorkspace { title: value } => {
                 tx.execute(
-                    "INSERT INTO workspaces VALUES(?1,?2)",
+                    "INSERT INTO workspaces(id,title) VALUES(?1,?2)",
                     params![id(), title(&value)?],
                 )
                 .map_err(err)?;
@@ -234,6 +248,30 @@ impl Library {
                     params![id(), workspace_id, title(&value)?, parent_id],
                 )
                 .map_err(err)?;
+            }
+            Action::UpdateWorkspace { workspace_id, title: value, icon, icon_color } => {
+                if icon.as_deref().is_some_and(|value| ![
+                    "atom", "orbit", "sigma", "flask", "telescope", "microscope",
+                    "dna", "calculator", "magnet", "globe",
+                    "book", "notebook", "pen", "feather", "graduation", "library", "school", "scroll",
+                    "ruler", "compass", "triangle", "pi", "infinity", "binary", "code", "brain",
+                    "lightbulb", "puzzle", "languages", "history", "network", "leaf",
+                    "laptop", "desktop", "terminal", "cpu", "database", "circuit", "keyboard", "braces",
+                ].contains(&value)) {
+                    return Err("Choose a supported workspace icon.".into());
+                }
+                if icon_color.as_deref().is_some_and(|value| {
+                    !["theme:icon-red", "theme:icon-orange", "theme:icon-yellow", "theme:icon-green",
+                      "theme:icon-cyan", "theme:icon-blue", "theme:icon-purple", "theme:icon-pink"].contains(&value)
+                      && (value.len() != 7 || !value.starts_with('#')
+                        || !value.as_bytes()[1..].iter().all(u8::is_ascii_hexdigit))
+                }) {
+                    return Err("Choose a theme color or use a six-digit hex icon color.".into());
+                }
+                if tx.execute("UPDATE workspaces SET title=?1,icon=?2,icon_color=?3 WHERE id=?4",
+                    params![title(&value)?, icon, icon_color, workspace_id]).map_err(err)? != 1 {
+                    return Err("This workspace no longer exists.".into());
+                }
             }
             Action::RemoveWorkspace { workspace_id } => {
                 tx.execute(
@@ -475,12 +513,14 @@ fn inspect_pdf(path: &Path) -> Result<(String, i64, String)> {
 }
 fn snapshot(db: &Connection) -> Result<Snapshot> {
     let workspaces = db
-        .prepare("SELECT id,title FROM workspaces ORDER BY title COLLATE NOCASE,id")
+        .prepare("SELECT id,title,icon,icon_color FROM workspaces ORDER BY title COLLATE NOCASE,id")
         .map_err(err)?
         .query_map([], |r| {
             Ok(Workspace {
                 id: r.get(0)?,
                 title: r.get(1)?,
+                icon: r.get(2)?,
+                icon_color: r.get(3)?,
             })
         })
         .map_err(err)?
@@ -1040,7 +1080,104 @@ mod tests {
                 .unwrap()
                 .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
                 .unwrap(),
-            5
+            6
         );
+    }
+    #[test]
+    fn workspace_appearance_survives_reopening_and_rejects_invalid_values() {
+        let dir = Fixture::new();
+        let path = dir.0.join("library.sqlite3");
+        let store = Library::open(&path).unwrap();
+        let data = store
+            .apply(Action::CreateWorkspace {
+                title: "Physics".into(),
+            })
+            .unwrap();
+        let workspace_id = data.workspaces[0].id.clone();
+        assert!(data.workspaces[0].icon.is_none());
+        assert!(data.workspaces[0].icon_color.is_none());
+        store
+            .apply(Action::UpdateWorkspace {
+                title: "Renamed Physics".into(),
+                workspace_id: workspace_id.clone(),
+                icon: Some("atom".into()),
+                icon_color: Some("#60a5fa".into()),
+            })
+            .unwrap();
+        drop(store);
+        let store = Library::open(&path).unwrap();
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(data.workspaces[0].title, "Renamed Physics");
+        assert_eq!(data.workspaces[0].icon.as_deref(), Some("atom"));
+        assert_eq!(data.workspaces[0].icon_color.as_deref(), Some("#60a5fa"));
+        for (icon, color) in [
+            ("unknown", "#ffffff"),
+            ("atom", "red"),
+            ("atom", "#12345g"),
+            ("atom", "theme:icon-unknown"),
+        ] {
+            assert!(
+                store
+                    .apply(Action::UpdateWorkspace {
+                        title: "Renamed Physics".into(),
+                        workspace_id: workspace_id.clone(),
+                        icon: Some(icon.into()),
+                        icon_color: Some(color.into())
+                    })
+                    .is_err()
+            );
+        }
+        assert!(
+            store
+                .apply(Action::UpdateWorkspace {
+                    title: "Renamed Physics".into(),
+                    workspace_id: "missing".into(),
+                    icon: None,
+                    icon_color: None
+                })
+                .is_err()
+        );
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(data.workspaces[0].title, "Renamed Physics");
+        assert_eq!(data.workspaces[0].icon.as_deref(), Some("atom"));
+        store
+            .apply(Action::UpdateWorkspace {
+                title: "Renamed Physics".into(),
+                workspace_id: workspace_id.clone(),
+                icon: Some("laptop".into()),
+                icon_color: Some("theme:icon-blue".into()),
+            })
+            .unwrap();
+        drop(store);
+        let store = Library::open(&path).unwrap();
+        let data = store.apply(Action::List).unwrap();
+        assert_eq!(
+            data.workspaces[0].icon_color.as_deref(),
+            Some("theme:icon-blue")
+        );
+        assert_eq!(data.workspaces[0].icon.as_deref(), Some("laptop"));
+        assert!(
+            store
+                .apply(Action::UpdateWorkspace {
+                    title: "  ".into(),
+                    workspace_id: workspace_id.clone(),
+                    icon: None,
+                    icon_color: None
+                })
+                .is_err()
+        );
+        let unchanged = store.apply(Action::List).unwrap();
+        assert_eq!(unchanged.workspaces[0].title, "Renamed Physics");
+        assert_eq!(unchanged.workspaces[0].icon.as_deref(), Some("laptop"));
+        let data = store
+            .apply(Action::UpdateWorkspace {
+                title: "Renamed Physics".into(),
+                workspace_id,
+                icon: None,
+                icon_color: None,
+            })
+            .unwrap();
+        assert!(data.workspaces[0].icon.is_none());
+        assert!(data.workspaces[0].icon_color.is_none());
     }
 }

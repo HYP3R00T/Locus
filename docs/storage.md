@@ -20,11 +20,11 @@ backup facilities; copying an active WAL database file alone is insufficient.
 
 ## Current schema
 
-The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 5).
+The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 6).
 
 | Table                  | Responsibility                                                                                                              |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `workspaces`           | UUID and display title                                                                                                      |
+| `workspaces`           | UUID, display title, optional icon key, and optional theme color reference or six-digit hex color                           |
 | `folders`              | UUID, workspace, title, and optional parent; one subfolder level                                                            |
 | `documents`            | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
 | `workspace_documents`  | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
@@ -111,5 +111,10 @@ Migration 4 adds nullable `folders.parent_id`; migration 5 adds `workspace_navig
 at the root. SQL triggers reject cross-workspace parents, deeper nesting, and invalid active-folder targets.
 Deleting a parent promotes its child folders to the workspace root and keeps PDFs in those child folders;
 PDFs directly in the removed folder move to the root. Deleting the active folder clears that workspace's
-navigation selection. Original files and authored drawings are preserved. Older app binaries refuse schema 5;
+navigation selection. Migration 6 adds nullable workspace icon/color fields; existing initials and theme colors remain the defaults.
+Appearance changes validate icon keys, palette references (`theme:icon-red` through the supported named swatches),
+and hex colors in Rust. Null color follows theme foreground; hex values remain fixed, including previously saved colors.
+These changes do not affect IDs, folders, or study materials.
+Workspace edits validate the title, icon, and color before updating all three in one SQLite transaction.
+Original files and authored drawings are preserved. Older app binaries refuse schema 6;
 back up the library before upgrading if rollback to an older app is needed.

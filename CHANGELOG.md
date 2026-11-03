@@ -8,6 +8,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Edit a workspace's name, scientific or academic icon, and theme-aware or custom color together through the workspace context menu.
 - Keep one material folder open per level, animate folder expansion, and reveal the tree when reopening its panel.
 - Animate sidebar toggles smoothly while respecting reduced-motion preferences.
 - Highlight the active workspace and creation folder, restore folder selection, and show the destination when creating folders. New Folder creates at the workspace root; subfolders use the context menu.

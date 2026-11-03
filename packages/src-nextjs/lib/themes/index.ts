@@ -58,7 +58,9 @@ const legacyRoles: Record<string, string> = {
   "sidebar-ring": "accent",
 };
 export function resolveThemeColors(theme: Theme): Record<string, string> {
-  const defaults = theme.mode === "dark" ? default_dark.colors : default_light.colors;
+  const bundled = BUILTIN_THEMES.find((item) => item.id === theme.id);
+  const defaults =
+    bundled?.colors ?? (theme.mode === "dark" ? default_dark.colors : default_light.colors);
   const legacy = ["surface", "mutedForeground", "accentForeground"].some(
     (key) => key in theme.colors,
   );
@@ -69,5 +71,13 @@ export function resolveThemeColors(theme: Theme): Record<string, string> {
         ),
       )
     : theme.colors;
-  return { ...defaults, ...overrides };
+  return {
+    ...defaults,
+    ...overrides,
+    "workspace-active-background":
+      overrides["workspace-active-background"] ??
+      (bundled
+        ? defaults["workspace-active-background"]
+        : "color-mix(in srgb, var(--client-surface) 84%, var(--foreground))"),
+  };
 }

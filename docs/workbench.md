@@ -50,6 +50,17 @@ trees do not keep users waiting. Transforms clear after the reveal to keep resti
 Folder contents animate their height. Reduced-motion
 preferences disable both content animations.
 
+Workspace selection uses `workspace-active-background`, separate from the primary panel surface, without a selection border.
+Right-click a workspace and choose **Edit Workspace** to change its name, icon, and color together.
+The name field doubles as the live icon preview. Save validates and persists all values atomically; Cancel discards the draft.
+Icon buttons retain accessible labels without hover tooltips.
+The first color swatch restores theme-default foreground; other swatches save semantic palette references that follow theme changes.
+Custom six-digit hex colors stay fixed. Appearance is saved per workspace in SQLite and shared by compact and expanded navigation.
+Modal dialogs explicitly render a dimming backdrop even inside the navigation sheet's dialog context;
+Base UI otherwise omits nested backdrops. No blur is applied to underlying text.
+The icon picker uses fixed-size cells with equal row/column gaps and includes academic, scientific, and computing symbols.
+Custom SVG uploads and emoji icons are not implemented.
+
 PDF fit-to-width follows its pane, reserves a vertical scrollbar lane, and suppresses temporary horizontal overflow
 while resizing. Fixed zoom and fit-to-height still allow horizontal scrolling when the page is wider than its pane.
 Fit modes follow pane resizing through PDF.js's delayed zoom API, temporarily reusing rendered canvases.
