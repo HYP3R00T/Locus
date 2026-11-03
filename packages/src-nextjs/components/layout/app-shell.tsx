@@ -429,6 +429,7 @@ export function AppShell() {
             <div
               className={cn(
                 "min-h-0 flex-1 overflow-x-hidden overflow-y-auto",
+                view === "workspace" && "locus-materials-reveal",
                 !contextVisible && "hidden",
               )}
             >

@@ -235,11 +235,47 @@
 }
 
 /* Navigation columns share a single outline, with their resize boundary inside it. */
+.locus-materials-reveal [data-tree-entry] {
+  transform-origin: left center;
+  animation: locus-materials-reveal 240ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+@keyframes locus-materials-reveal {
+  from {
+    opacity: 0;
+    transform: perspective(600px) translate3d(-8px, 4px, -12px) rotateY(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.locus-tree-children {
+  height: var(--collapsible-panel-height);
+  overflow: hidden;
+  transition:
+    height 180ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.locus-tree-children[data-starting-style],
+.locus-tree-children[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+
 [data-navigation-motion="true"] > [data-slot="resizable-panel"] {
   transition: flex-grow 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .locus-materials-reveal [data-tree-entry] {
+    animation: none;
+  }
+  .locus-tree-children {
+    transition: none;
+  }
   [data-navigation-motion="true"] > [data-slot="resizable-panel"] {
     transition: none;
   }
