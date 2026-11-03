@@ -22,11 +22,14 @@ invalidated during startup resizing or zoom so an early preview cannot dismiss t
 surface stays unchanged while the selected theme is applied underneath. No minimum loading delay is added;
 the app does not wait for every PDF page. Reduced motion disables the spinner animation and fade. Errors and password prompts
 release their pane's readiness gate; after ten seconds, Show workspace lets the user bypass a stalled renderer.
-During loading, PDF containers use hidden overflow with the existing stable scrollbar gutter. Programmatic
-page restoration still works, while WebKit overlay scrollbar thumbs cannot paint above the loading layer.
-Other scrollbar thumbs are transparent until reveal. Restoring ordinary scrolling does not change the reserved gutter.
+PDFs use Base UI Scroll Area with native scrolling and document-rendered scrollbar thumbs, avoiding
+WebKit overlay scrollbar painting. A fixed vertical lane preserves fit geometry. Thumbs remain visible
+while content overflows, including when idle; during startup they stay hidden until reveal.
+Other native scrollbar thumbs are transparent until reveal.
 Startup markers go to the existing native log; see [timing diagnostics](packages/native.md#window-state-and-local-diagnostics).
-PDF engine/viewer imports and metadata access begin concurrently, overlapping viewer module loading with document parsing.
+PDF engine import and metadata access begin concurrently. Viewer import waits for the engine to publish
+`globalThis.pdfjsLib`, which the viewer reads during module evaluation; loading both independently can fail
+in packaged production chunks with an undefined `AbortException` import. Viewer loading still overlaps PDF parsing.
 After parsing, page 1 and the saved page are requested concurrently. The saved page's geometry is installed
 before restoring the view, avoiding a sequential first-page-then-saved-page request. A separate startup marker
 records when these page prerequisites are ready; performance gains require a measured comparison.

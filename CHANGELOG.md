@@ -52,6 +52,8 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Use persistent PDF scrollbar thumbs so the scroll position remains visible instead of disappearing after scrolling.
+- Initialize the PDF.js engine before its viewer so packaged apps can open PDFs reliably.
 - Restore smooth Linux whiteboard drawing by removing the forced WebKitGTK DMA-BUF renderer override.
 - Use square corners for navigation, study panes, resize gutters, and pane drop previews.
 - Resize fitted PDFs continuously with their pane, then redraw sharply after resizing settles.

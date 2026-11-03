@@ -204,29 +204,13 @@
   box-sizing: content-box;
 }
 
-/* Reserve a PDF scrollbar lane instead of showing an overlay beside resize targets. */
+/* Base UI draws the thumb in the document, avoiding WebKit's overlay paint path.
+   The viewport reserves a fixed lane so PDF fit geometry does not depend on it. */
 .locus-pdf-scroll {
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
   overscroll-behavior: contain;
 }
-.locus-pdf-scroll::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.locus-pdf-scroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  border-radius: 5px;
-}
-
-/* WebKit can composite overlay scrollbars above an opaque loading sibling.
-   Hidden overflow remains programmatically scrollable, and the stable gutter
-   keeps PDF geometry unchanged when normal scrolling returns. */
-[data-startup-pending] .locus-pdf-scroll {
-  overflow: hidden;
+[data-startup-pending] .locus-pdf-scrollbar {
+  visibility: hidden;
 }
 [data-startup-pending],
 [data-startup-pending] * {
