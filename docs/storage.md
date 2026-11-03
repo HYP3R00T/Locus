@@ -20,7 +20,7 @@ backup facilities; copying an active WAL database file alone is insufficient.
 
 ## Current schema
 
-The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 6).
+The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 7).
 
 | Table                  | Responsibility                                                                                                              |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -29,6 +29,7 @@ The authoritative DDL is `packages/src-tauri/migrations/` (versions 1 through 6)
 | `documents`            | UUID, canonical path, title, SHA-256 fingerprint, size, modification time                                                   |
 | `workspace_documents`  | Workspace/document association, optional folder and display-title override; cross-workspace folder assignment is rejected   |
 | `workspace_navigation` | Per-workspace active folder, restored after reopening; deleting the folder resets it to the workspace root                  |
+| `workspace_sessions`   | Versioned JSON for open panes, split proportions, active pane, PDF positions, and folder expansion                          |
 | `drawings`             | Stable drawing ID, workspace ID, and display title; scene content lives in standard `.excalidraw` files                     |
 | `reading_positions`    | Zero-based physical page index, page-relative vertical fraction, and offset format version for each workspace/document pair |
 
@@ -116,5 +117,9 @@ Appearance changes validate icon keys, palette references (`theme:icon-red` thro
 and hex colors in Rust. Null color follows theme foreground; hex values remain fixed, including previously saved colors.
 These changes do not affect IDs, folders, or study materials.
 Workspace edits validate the title, icon, and color before updating all three in one SQLite transaction.
-Original files and authored drawings are preserved. Older app binaries refuse schema 6;
+Migration 7 adds workspace sessions, deleted automatically with their workspace. Session writes validate
+the two-column/two-row limit, unique pane IDs, material kinds, positions, folder state, and a 64 KiB limit.
+Invalid stored sessions are ignored without blocking the library. Removed or foreign-workspace references
+become empty slots on restore; duplicate whiteboards are cleared to preserve one live editor per drawing.
+Original files and authored drawings are preserved. Older app binaries refuse schema 7;
 back up the library before upgrading if rollback to an older app is needed.

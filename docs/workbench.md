@@ -11,6 +11,13 @@ The palette includes material selection, whiteboard creation, navigation, prefer
 closing, and **Split Vertically** / **Split Horizontally**. Split commands create empty panes; selecting a material is a separate action. Disabled actions remain visible with their current shortcut.
 The maximum remains two columns, each with up to two rows.
 
+Each workspace restores its open materials, active pane, split proportions, individual PDF page positions,
+and expanded folder branch after switching workspaces or restarting Locus. Session metadata is debounced
+for 350 ms and saved through Rust to SQLite. Normal window closing flushes pending session and drawing writes;
+a failure keeps the window open for retry. Forced termination can lose the latest unsaved interval.
+Missing or removed materials leave empty slots. PDF zoom currently reopens in fit-to-width mode; navigation column
+widths and the selected Settings page are not part of the saved workspace session.
+
 Commands are grouped by Workspace, Layout, Navigation, Preferences, and the active PDF/Whiteboard scope.
 Choose **Preferences: Color Theme** to open a searchable theme picker with System, Light themes, and Dark themes
 groups and a marker for the saved choice. The picker starts on that choice; moving the highlighted item

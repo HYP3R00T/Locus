@@ -255,6 +255,8 @@ export function AppShell() {
       workspace={data.workspace}
       selectedId={data.selected?.id ?? data.selectedDrawing?.id}
       activeFolderId={data.activeFolder?.id ?? null}
+      expandedFolders={data.layout.expandedFolders ?? {}}
+      onExpandFolder={data.expandFolder}
       onFolderSelect={data.chooseFolder}
       disabled={data.busy || !data.ready || !data.native}
       onSelect={(item, target) => {

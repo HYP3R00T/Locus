@@ -9,6 +9,7 @@ import { ActionTooltip } from "@/components/workbench/action-tooltip";
 import { CommandCenter, TitlebarLayoutControls } from "@/components/workbench/titlebar-controls";
 import { flushDrawings } from "@/lib/drawings";
 import { useNotice } from "@/lib/notifications";
+import { flushSessions } from "@/lib/sessions";
 
 const subscribe = () => () => {};
 const browserSnapshot = () => false;
@@ -27,11 +28,11 @@ export function WindowFrame({ children }: { children: ReactNode }) {
         }
         saving = true;
         try {
-          await flushDrawings();
+          await Promise.all([flushDrawings(), flushSessions()]);
         } catch {
           event.preventDefault();
           setError(
-            "Could not save your whiteboard. The window was kept open; try closing again to retry.",
+            "Could not save your study session or whiteboard. The window was kept open; try closing again to retry.",
           );
         } finally {
           saving = false;

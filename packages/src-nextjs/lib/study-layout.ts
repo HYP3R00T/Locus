@@ -13,11 +13,17 @@ export type StudyPane = {
   id: string;
   content: PaneContent | null;
   position?: ReadingPosition;
+  size?: number;
 };
-export type StudyColumn = { id: string; panes: StudyPane[] };
-export type StudyLayout = { columns: StudyColumn[]; activeId: string };
+export type StudyColumn = { id: string; panes: StudyPane[]; size?: number };
+export type StudyLayout = {
+  columns: StudyColumn[];
+  activeId: string;
+  expandedFolders?: Record<string, string | null>;
+};
 export type StudyLayoutAction =
   | { type: "reset" }
+  | { type: "folders"; group: string; folderId: string | null }
   | { type: "replace"; layout: StudyLayout }
   | { type: "activate"; paneId: string }
   | { type: "open"; content: PaneContent }
@@ -59,6 +65,13 @@ export function activeStudyPane(layout: StudyLayout) {
 export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutAction): StudyLayout {
   if (action.type === "reset") return createStudyLayout();
   if (action.type === "replace") return action.layout;
+  if (action.type === "folders")
+    return layout.expandedFolders?.[action.group] === action.folderId
+      ? layout
+      : {
+          ...layout,
+          expandedFolders: { ...layout.expandedFolders, [action.group]: action.folderId },
+        };
   const column = layout.columns.find((entry) => entry.panes.some((p) => p.id === layout.activeId));
   if (!column) throw new Error("Study layout has no active column.");
   const active = activeStudyPane(layout);
@@ -126,7 +139,7 @@ export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutActio
             p.id === active.id
               ? p.content?.kind === action.content.kind && p.content.id === action.content.id
                 ? p
-                : { id: p.id, content: action.content }
+                : { id: p.id, content: action.content, size: p.size }
               : p,
           ),
         })),
@@ -187,7 +200,7 @@ export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutActio
         if (!nextColumn) return layout;
         nextColumn.panes.splice(before ? 0 : nextColumn.panes.length, 0, pane);
       }
-      return { columns: nextColumns, activeId: pane.id };
+      return { ...layout, columns: nextColumns, activeId: pane.id };
     }
     case "split": {
       if (action.axis === "columns" ? layout.columns.length >= 2 : column.panes.length >= 2)
@@ -197,6 +210,7 @@ export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutActio
         content: null,
       };
       return {
+        ...layout,
         activeId: pane.id,
         columns:
           action.axis === "columns"
@@ -209,12 +223,16 @@ export function studyLayoutReducer(layout: StudyLayout, action: StudyLayoutActio
     case "close": {
       if (layout.columns.flatMap((c) => c.panes).length === 1) {
         if (active.id !== action.paneId || !active.content) return layout;
-        return { ...layout, columns: [{ ...column, panes: [{ id: active.id, content: null }] }] };
+        return {
+          ...layout,
+          columns: [{ ...column, panes: [{ id: active.id, content: null, size: active.size }] }],
+        };
       }
       const columns = layout.columns
         .map((c) => ({ ...c, panes: c.panes.filter((p) => p.id !== action.paneId) }))
         .filter((c) => c.panes.length > 0);
       return {
+        ...layout,
         columns,
         activeId:
           active.id === action.paneId

@@ -1,4 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import type { StudyLayout } from "@/lib/study-layout";
+
+export type WorkspaceSession = { version: 1; workspaceId: string; layout: StudyLayout };
 
 export type Workspace = {
   id: string;
@@ -24,6 +27,7 @@ export type Library = {
   documents: StudyDocument[];
   drawings: Drawing[];
   navigation: { workspaceId: string; folderId: string | null }[];
+  sessions: WorkspaceSession[];
 };
 export const emptyLibrary: Library = {
   workspaces: [],
@@ -31,9 +35,11 @@ export const emptyLibrary: Library = {
   documents: [],
   drawings: [],
   navigation: [],
+  sessions: [],
 };
 export type LibraryAction =
   | { type: "list" }
+  | { type: "saveSession"; session: WorkspaceSession }
   | { type: "createDrawing"; workspaceId: string; title: string }
   | { type: "renameDrawing"; drawingId: string; title: string }
   | { type: "removeDrawing"; drawingId: string }

@@ -45,7 +45,15 @@ export function StudyArea({
   const drawings = data.library.drawings.filter((d) => d.workspaceId === data.workspace?.id);
   const panes = data.layout.columns.flatMap((c) => c.panes);
   return (
-    <ResizablePanelGroup orientation="horizontal" id="study-columns" className="min-h-0 min-w-0">
+    <ResizablePanelGroup
+      orientation="horizontal"
+      id="study-columns"
+      key={data.workspace?.id}
+      className="min-h-0 min-w-0"
+      onLayoutChanged={(sizes, meta) => {
+        if (meta.isUserInteraction) data.saveLayoutSizes(sizes);
+      }}
+    >
       {data.layout.columns.map((column, columnIndex) => (
         <Fragment key={column.id}>
           {columnIndex > 0 && (
@@ -54,10 +62,16 @@ export function StudyArea({
           <ResizablePanel
             id={column.id}
             minSize="20%"
-            defaultSize="50%"
+            defaultSize={`${column.size ?? 50}%`}
             className="min-w-0 overflow-hidden"
           >
-            <ResizablePanelGroup orientation="vertical" id={`study-rows-${column.id}`}>
+            <ResizablePanelGroup
+              orientation="vertical"
+              id={`study-rows-${column.id}`}
+              onLayoutChanged={(sizes, meta) => {
+                if (meta.isUserInteraction) data.saveLayoutSizes(sizes, column.id);
+              }}
+            >
               {column.panes.map((pane, rowIndex) => {
                 const document = data.paneDocument(pane);
                 const drawing =
@@ -72,7 +86,7 @@ export function StudyArea({
                     <ResizablePanel
                       id={pane.id}
                       minSize="20%"
-                      defaultSize="50%"
+                      defaultSize={`${pane.size ?? 50}%`}
                       className="min-h-0 overflow-hidden"
                     >
                       <section
