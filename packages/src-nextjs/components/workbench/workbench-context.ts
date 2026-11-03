@@ -16,7 +16,6 @@ type WorkbenchContextValue = {
   setInfo: (info: WorkbenchInfo) => void;
   preferences: Preferences;
   updatePreferences: (preferences: Preferences) => void;
-  resetPreferences: () => void;
   preferenceError: string | null;
   preferencesReady: boolean;
   preferencesWritable: boolean;

@@ -4,9 +4,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FolderIcon,
-  KeyboardIcon,
   PaletteIcon,
-  PenLineIcon,
   PlusIcon,
   Settings2Icon,
 } from "lucide-react";
@@ -17,6 +15,7 @@ import {
   type PreferenceSection,
   PreferencesSettings,
 } from "@/components/settings/preferences-settings";
+import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -53,7 +52,8 @@ import { cn } from "@/lib/utils";
 export function AppShell() {
   const data = useLibrary();
   const [view, setView] = useState<"workspace" | "settings">("workspace");
-  const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("appearance");
+  const [preferenceSection, setPreferenceSection] = useState<PreferenceSection>("common");
+  const [settingsQuery, setSettingsQuery] = useState("");
   const [navigationExpanded, setNavigationExpanded] = useState(false);
   const [contextExpanded, setContextExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -229,28 +229,14 @@ export function AppShell() {
     setView("workspace");
   }
   const settingsNavigation = (
-    <nav aria-label="Settings categories" className="px-2">
-      {(
-        [
-          { id: "appearance", title: "Appearance", icon: PaletteIcon },
-          { id: "keybindings", title: "Key Bindings", icon: KeyboardIcon },
-          { id: "canvas", title: "Canvas", icon: PenLineIcon },
-        ] as const
-      ).map((section) => (
-        <NavigationAction
-          key={section.id}
-          aria-current={preferenceSection === section.id ? "page" : undefined}
-          className={cn(preferenceSection === section.id && "bg-sidebar-accent")}
-          onClick={() => {
-            setPreferenceSection(section.id);
-            setMobileOpen(false);
-          }}
-        >
-          <section.icon />
-          <span>{section.title}</span>
-        </NavigationAction>
-      ))}
-    </nav>
+    <SettingsNavigation
+      section={preferenceSection}
+      query={settingsQuery}
+      onSelect={(section) => {
+        setPreferenceSection(section);
+        setMobileOpen(false);
+      }}
+    />
   );
   const tree = (
     <StudyTree
@@ -483,11 +469,13 @@ export function AppShell() {
             )}
           >
             {view === "settings" ? (
-              <div
-                key={preferenceSection}
-                className="locus-settings-scroll h-full overflow-x-hidden overflow-y-auto bg-background"
-              >
-                <PreferencesSettings section={preferenceSection} />
+              <div className="h-full min-h-0 overflow-hidden bg-background">
+                <PreferencesSettings
+                  section={preferenceSection}
+                  query={settingsQuery}
+                  onQueryChange={setSettingsQuery}
+                  onSectionChange={setPreferenceSection}
+                />
               </div>
             ) : (
               <StudyArea data={data} onCreateWorkspace={() => openCreate("workspace")} />

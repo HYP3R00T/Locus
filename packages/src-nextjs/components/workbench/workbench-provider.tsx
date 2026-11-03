@@ -1,6 +1,9 @@
 "use client";
 
+import { ArrowLeftIcon, MonitorIcon } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useConfiguration } from "@/components/configuration-provider";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -17,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ActionTooltip } from "@/components/workbench/action-tooltip";
 import {
   type CommandHandler,
   type MaterialOption,
@@ -25,29 +29,34 @@ import {
 } from "@/components/workbench/workbench-context";
 import {
   bindingFor,
+  COMMAND_GROUPS,
   COMMANDS,
   type CommandId,
+  commandGroup,
   commandsForScope,
-  DEFAULT_PREFERENCES,
   eventBinding,
-  LEGACY_PREFERENCES_KEY,
-  PREFERENCES_KEY,
-  type Preferences,
-  parsePreferences,
   platformBinding,
 } from "@/lib/workbench";
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<WorkbenchInfo>({ activeId: null, scope: null, columns: [] });
-  const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
-  const [preferencesReady, setPreferencesReady] = useState(false);
-  const [preferencesWritable, setPreferencesWritable] = useState(true);
-  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const {
+    preferences,
+    updatePreferences,
+    ready: preferencesReady,
+    writable: preferencesWritable,
+    error: preferenceError,
+    appearance,
+    themes,
+    selectTheme,
+    previewTheme,
+  } = useConfiguration();
   const [recording, setRecording] = useState(false);
   const [mac, setMac] = useState(false);
   const [open, setOpen] = useState(false);
+  const [themeCursor, setThemeCursor] = useState("");
   const [paletteSession, setPaletteSession] = useState(0);
-  const [mode, setMode] = useState<"commands" | "materials">("commands");
+  const [mode, setMode] = useState<"commands" | "materials" | "themes">("commands");
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [commandError, setCommandError] = useState<string | null>(null);
   const registry = useRef(
@@ -70,44 +79,8 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     [],
   );
   useEffect(() => {
-    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-    setMac(isMac);
-    try {
-      const current = localStorage.getItem(PREFERENCES_KEY);
-      const raw = current ?? localStorage.getItem(LEGACY_PREFERENCES_KEY);
-      if (raw) {
-        const loaded = parsePreferences(raw, isMac);
-        setPreferences(loaded);
-        if (!current || JSON.parse(raw).version === 1)
-          localStorage.setItem(PREFERENCES_KEY, JSON.stringify(loaded));
-      }
-    } catch (error) {
-      setPreferencesWritable(false);
-      setPreferenceError(String(error));
-    }
-    setPreferencesReady(true);
+    setMac(/Mac|iPhone|iPad/.test(navigator.platform));
   }, []);
-  function updatePreferences(value: Preferences) {
-    if (!preferencesReady || !preferencesWritable) return;
-    try {
-      const validated = parsePreferences(JSON.stringify(value), mac);
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(validated));
-      setPreferences(validated);
-      setPreferenceError(null);
-    } catch (error) {
-      setPreferenceError(`Preferences were not saved: ${String(error)}`);
-    }
-  }
-  function resetPreferences() {
-    try {
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(DEFAULT_PREFERENCES));
-      setPreferences(DEFAULT_PREFERENCES);
-      setPreferencesWritable(true);
-      setPreferenceError(null);
-    } catch (error) {
-      setPreferenceError(String(error));
-    }
-  }
   function handler(id: CommandId) {
     const command = COMMANDS.find((item) => item.id === id);
     if (!command || (command.scope !== "global" && command.scope !== info.scope)) return undefined;
@@ -117,18 +90,20 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   function enabled(id: CommandId) {
     if (id === "palette") return true;
     if (id === "material.open") return materials.length > 0;
+    if (id === "theme.select") return preferencesReady && preferencesWritable;
     if (id === "drawing.controls")
       return info.scope === "drawing" && preferencesReady && preferencesWritable;
     const command = handler(id);
     return !!command && command.enabled !== false;
   }
-  function showPalette(nextMode: "commands" | "materials") {
+  function showPalette(nextMode: "commands" | "materials" | "themes") {
     if (!open)
       focusBeforePalette.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
     pendingCommand.current = null;
     ranCommand.current = false;
     setPaletteSession((value) => value + 1);
+    if (nextMode === "themes") setThemeCursor(appearance.theme);
     setMode(nextMode);
     setOpen(true);
   }
@@ -145,6 +120,21 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       setOpen(false);
     } else run();
   }
+  useEffect(() => {
+    // A committed choice keeps its preview until the asynchronous save finishes.
+    if (mode !== "themes" || (!open && !pendingCommand.current)) previewTheme(null);
+  }, [open, mode, previewTheme]);
+  function chooseTheme(id: string) {
+    execute(async () => {
+      try {
+        if (!(await selectTheme(id)))
+          throw new Error("Theme was not saved. Check Configuration in Settings.");
+      } finally {
+        previewTheme(null);
+        focusBeforePalette.current?.focus({ preventScroll: true });
+      }
+    });
+  }
   const paletteInputRef = useCallback((node: HTMLInputElement | null) => {
     input.current = node;
     node?.focus();
@@ -158,6 +148,10 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     }
     if (id === "material.open") {
       showPalette("materials");
+      return;
+    }
+    if (id === "theme.select") {
+      showPalette("themes");
       return;
     }
     if (id === "pane.close" && open) {
@@ -215,7 +209,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
         setInfo,
         preferences,
         updatePreferences,
-        resetPreferences,
         preferenceError,
         preferencesReady,
         preferencesWritable,
@@ -259,41 +252,147 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">
-            <DialogTitle>{mode === "materials" ? "Open Material" : "Command Palette"}</DialogTitle>
+            <DialogTitle>
+              {mode === "materials"
+                ? "Open Material"
+                : mode === "themes"
+                  ? "Color Theme"
+                  : "Command Palette"}
+            </DialogTitle>
             <DialogDescription>
-              Search commands for the active pane or open a study material.
+              {mode === "themes"
+                ? "Browse to preview. Enter saves the theme; Escape restores your saved theme."
+                : mode === "materials"
+                  ? "Search your workspace materials."
+                  : "Search commands for the active pane."}
             </DialogDescription>
           </DialogHeader>
-          <Command key={`${mode}:${paletteSession}`}>
-            <CommandInput
-              ref={paletteInputRef}
-              placeholder={mode === "materials" ? "Search materials…" : "Type a command…"}
-              aria-label="Search commands"
-            />
-            <CommandList>
+          <Command
+            key={`${mode}:${paletteSession}`}
+            value={mode === "themes" ? themeCursor : undefined}
+            onValueChange={
+              mode === "themes"
+                ? (id) => {
+                    setThemeCursor(id);
+                    previewTheme(
+                      id === "system" || themes.some((theme) => theme.id === id) ? id : null,
+                    );
+                  }
+                : undefined
+            }
+          >
+            <div className="flex items-center border-b">
+              {mode === "themes" && (
+                <ActionTooltip label="Back to commands">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-1 shrink-0"
+                    aria-label="Back to commands"
+                    onClick={() => showPalette("commands")}
+                  >
+                    <ArrowLeftIcon />
+                  </Button>
+                </ActionTooltip>
+              )}
+              <div className="min-w-0 flex-1 [&_[data-slot=command-input-wrapper]]:border-0">
+                <CommandInput
+                  ref={paletteInputRef}
+                  placeholder={
+                    mode === "materials"
+                      ? "Search materials…"
+                      : mode === "themes"
+                        ? "Search themes…"
+                        : "Type a command…"
+                  }
+                  aria-label={
+                    mode === "themes"
+                      ? "Search themes"
+                      : mode === "materials"
+                        ? "Search materials"
+                        : "Search commands"
+                  }
+                />
+              </div>
+            </div>
+            <CommandList
+              className={
+                mode === "themes"
+                  ? "max-h-[min(24rem,60vh)] [&_[cmdk-item]]:py-1 [&_[cmdk-group-heading]]:text-right [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group]+[cmdk-group]]:border-t"
+                  : undefined
+              }
+            >
               <CommandEmpty>No matching {mode}.</CommandEmpty>
               {mode === "commands" ? (
-                <CommandGroup
-                  heading={
-                    info.scope
-                      ? `Commands · active ${info.scope === "drawing" ? "whiteboard" : "PDF"} pane`
-                      : "Commands"
-                  }
-                >
-                  {commandsForScope(info.scope).map((command) => (
+                COMMAND_GROUPS.map((group) => {
+                  const commands = commandsForScope(info.scope).filter(
+                    (command) => commandGroup(command.id) === group,
+                  );
+                  return (
+                    commands.length > 0 && (
+                      <CommandGroup key={group} heading={group}>
+                        {commands.map((command) => (
+                          <CommandItem
+                            key={command.id}
+                            value={command.title}
+                            disabled={!enabled(command.id)}
+                            onSelect={() => perform(command.id)}
+                          >
+                            {command.title}
+                            <CommandShortcut>
+                              {bindingFor(command.id, preferences).replace(
+                                "Mod",
+                                mac ? "⌘" : "Ctrl",
+                              )}
+                            </CommandShortcut>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )
+                  );
+                })
+              ) : mode === "themes" ? (
+                <>
+                  <CommandGroup heading="System">
                     <CommandItem
-                      key={command.id}
-                      value={command.title}
-                      disabled={!enabled(command.id)}
-                      onSelect={() => perform(command.id)}
+                      value="system"
+                      keywords={["Follow system"]}
+                      data-checked={appearance.theme === "system"}
+                      disabled={!preferencesWritable}
+                      onSelect={() => chooseTheme("system")}
                     >
-                      {command.title}
-                      <CommandShortcut>
-                        {bindingFor(command.id, preferences).replace("Mod", mac ? "⌘" : "Ctrl")}
-                      </CommandShortcut>
+                      <MonitorIcon />
+                      <span>Follow system</span>
+                      {appearance.theme === "system" && (
+                        <span className="sr-only">Current theme</span>
+                      )}
                     </CommandItem>
+                  </CommandGroup>
+                  {(["light", "dark"] as const).map((themeMode) => (
+                    <CommandGroup
+                      key={themeMode}
+                      heading={themeMode === "light" ? "Light themes" : "Dark themes"}
+                    >
+                      {themes
+                        .filter((theme) => theme.mode === themeMode)
+                        .map((theme) => (
+                          <CommandItem
+                            key={theme.id}
+                            value={theme.id}
+                            keywords={[theme.name, theme.mode]}
+                            data-checked={appearance.theme === theme.id}
+                            disabled={!preferencesWritable}
+                            onSelect={() => chooseTheme(theme.id)}
+                          >
+                            <span>{theme.name}</span>
+                            {appearance.theme === theme.id && (
+                              <span className="sr-only">Current theme</span>
+                            )}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
                   ))}
-                </CommandGroup>
+                </>
               ) : (
                 <CommandGroup heading="Workspace materials">
                   {materials.map((item) => (
