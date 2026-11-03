@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  BookPlusIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FolderIcon,
   PlusIcon,
   Settings2Icon,
+  SquarePenIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
@@ -436,19 +438,45 @@ export function AppShell() {
                 {view === "settings" ? (
                   <h2 className="truncate px-5 text-xs font-medium">Settings</h2>
                 ) : (
-                  <div className="flex w-[55px] shrink-0 justify-center">
-                    <NavigationAction
-                      compact
-                      aria-label={contextLabel}
-                      title={contextLabel}
-                      command="navigation.materials"
-                      aria-expanded={contextExpanded}
-                      aria-controls="context-navigation"
-                      onClick={() => setContextExpanded(!contextExpanded)}
-                    >
-                      {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                    </NavigationAction>
-                  </div>
+                  <>
+                    <div className="flex w-[55px] shrink-0 justify-center">
+                      <NavigationAction
+                        compact
+                        aria-label={contextLabel}
+                        title={contextLabel}
+                        command="navigation.materials"
+                        aria-expanded={contextExpanded}
+                        aria-controls="context-navigation"
+                        onClick={() => setContextExpanded(!contextExpanded)}
+                      >
+                        {contextExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                      </NavigationAction>
+                    </div>
+                    {contextExpanded && (
+                      <div className="ml-auto flex shrink-0 items-center gap-1 pr-2">
+                        <NavigationAction
+                          compact
+                          aria-label="Add PDF"
+                          title="Add PDF"
+                          command="pdf.add"
+                          disabled={!workbench.enabled("pdf.add")}
+                          onClick={() => workbench.perform("pdf.add")}
+                        >
+                          <BookPlusIcon />
+                        </NavigationAction>
+                        <NavigationAction
+                          compact
+                          aria-label="New whiteboard"
+                          title="New whiteboard"
+                          command="whiteboard.new"
+                          disabled={!workbench.enabled("whiteboard.new")}
+                          onClick={() => workbench.perform("whiteboard.new")}
+                        >
+                          <SquarePenIcon />
+                        </NavigationAction>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               <div
