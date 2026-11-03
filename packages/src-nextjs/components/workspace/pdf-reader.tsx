@@ -275,8 +275,25 @@ export function PdfReader({
         previousHeight = height;
         if (!widthChanged && !(fit.current === "page-height" && heightChanged)) return;
         clearTimeout(fitTimer);
+        const mode = fit.current;
+        const page = activeViewer.getPageView(activeViewer.currentPageNumber - 1);
+        if (mode && page) {
+          // Match PDF.js's continuous, single-page fit calculation. Its delayed
+          // zoom reuses rendered canvases during motion instead of redrawing them.
+          const scale =
+            mode === "page-width"
+              ? ((container.clientWidth - 40) / page.width) * page.scale
+              : ((container.clientHeight - 5) / page.height) * page.scale;
+          if (scale > 0) {
+            activeViewer.updateScale({
+              scaleFactor: scale / activeViewer.currentScale,
+              drawingDelay: 200,
+            });
+          }
+        }
         fitTimer = setTimeout(() => {
           if (!cancelled && fit.current && activeViewer.pagesCount) {
+            // Restore the exact preset after the gesture API's rounded preview.
             activeViewer.currentScaleValue = fit.current;
           }
         }, 150);

@@ -222,8 +222,10 @@
   border-radius: 5px;
 }
 
-/* One switch hides Excalidraw's complete UI layer without hiding the drawing canvas. */
+/* Compact panes render separate top/bottom bars instead of the desktop UI wrapper. */
 .locus-whiteboard[data-controls-visible="false"] .layer-ui__wrapper,
+.locus-whiteboard[data-controls-visible="false"] .App-top-bar,
+.locus-whiteboard[data-controls-visible="false"] .App-bottom-bar,
 .locus-whiteboard .locus-disabled-library {
   display: none;
 }
@@ -233,6 +235,16 @@
 }
 
 /* Navigation columns share a single outline, with their resize boundary inside it. */
+[data-navigation-motion="true"] > [data-slot="resizable-panel"] {
+  transition: flex-grow 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-navigation-motion="true"] > [data-slot="resizable-panel"] {
+    transition: none;
+  }
+}
+
 .locus-navigation-primary {
   border: 1px solid var(--sidebar-border);
   border-right: 0;

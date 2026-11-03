@@ -97,7 +97,7 @@ export function AppShell() {
       run: () => openCreate("workspace"),
     },
     "folder.new": {
-      enabled: data.native && !!data.workspace && !data.busy && !data.activeFolder?.parentId,
+      enabled: data.native && !!data.workspace && !data.busy,
       run: () => openCreate("folder"),
     },
     "pdf.add": {
@@ -225,10 +225,7 @@ export function AppShell() {
       })),
     });
   }, [data.layout, data.library.documents, data.library.drawings, view, workbench.setInfo]);
-  function openCreate(
-    kind: "workspace" | "folder",
-    parentId: string | null = data.activeFolder?.id ?? null,
-  ) {
+  function openCreate(kind: "workspace" | "folder", parentId: string | null = null) {
     setCreateParentId(parentId);
     setCreateWorkspaceId(data.workspace?.id ?? null);
     setTitle("");

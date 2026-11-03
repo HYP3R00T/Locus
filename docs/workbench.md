@@ -36,13 +36,19 @@ independent views in multiple panes. Explicit Split commands still create empty 
 four-pane limit. Existing whiteboards dragged between panes move instead of opening competing editors.
 
 The two navigation columns share one outer frame. Study panes and Preferences use the same thin borders and small
-rounded corners, without inset editor padding. The work area has a uniform four-pixel outer inset, including
+rounded corners, without inset editor padding. Sidebar toggles commit one target layout and let CSS interpolate
+panel widths over 200 ms, avoiding per-frame React layout updates. Manual resizing remains immediate.
+Reduced-motion preferences skip the animation. Rapid toggles reverse from the current width. The work area has a uniform four-pixel outer inset, including
 the left edge of navigation and the space below the title bar. The active pane is marked in the title-bar map; container borders
 remain unchanged when focus moves. Six-pixel gutters have three-dot grips and highlight across the entire gap
 on hover, dragging, or keyboard focus, keeping their hit areas separate from content scroll containers.
 
 PDF fit-to-width follows its pane, reserves a vertical scrollbar lane, and suppresses temporary horizontal overflow
 while resizing. Fixed zoom and fit-to-height still allow horizontal scrolling when the page is wider than its pane.
+Fit modes follow pane resizing through PDF.js's delayed zoom API, temporarily reusing rendered canvases.
+After 150 ms without resizing, the exact fit preset is restored and the PDF redraws sharply.
+The fit calculation follows PDF.js's continuous, single-page layout padding (40px horizontal, 5px vertical);
+review it if upgrading PDF.js or introducing spreads, horizontal page layout, or borderless pages.
 
 ## Keyboard scopes
 
@@ -109,7 +115,9 @@ It hides or shows the whole Excalidraw UI layer: toolbar, properties, menus, zoo
 The drawing canvas and its content remain available. Menus and dialogs close when the controls are hidden.
 
 Excalidraw's partial Zen mode is held off so it does not compete with this single visibility setting.
-One scoped CSS adapter targets `.layer-ui__wrapper`; review it when upgrading Excalidraw.
+One scoped CSS adapter targets the desktop `.layer-ui__wrapper` and compact `.App-top-bar` / `.App-bottom-bar`.
+Excalidraw chooses its compact layout from each pane's width and height, independently of the application window.
+Review these selectors when upgrading Excalidraw.
 These UI preferences do not alter drawing elements or saved scene files.
 
 ## PDF links and wheel zoom

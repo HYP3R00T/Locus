@@ -101,10 +101,9 @@ books on each target OS; a browser preview does not prove the platform's WebView
 
 ## Navigation selection and subfolders
 
-The sidebar names the current workspace and highlights the active creation folder. Clicking the workspace-root
-row selects the root; selecting a folder or PDF updates the folder target. Pane focus follows a PDF's folder;
-whiteboards use the workspace root. New Folder uses this target, and its dialog shows the captured destination.
-The folder command is unavailable inside a subfolder because two folder levels is the current limit.
+The primary sidebar highlights the current workspace; the material tree highlights the active folder. Selecting a folder or PDF updates the folder target. Pane focus follows a PDF's folder;
+whiteboards use the workspace root. New Folder always creates at the workspace root. Right-click a top-level folder and choose Create subfolder
+to create within it. The dialog shows the captured destination. Two folder levels is the current limit.
 Selection is stored in SQLite per workspace, independent of the open-pane layout. Active ancestors expand
 when needed so the selected folder is visible. Add PDF uses the same selected destination.
 

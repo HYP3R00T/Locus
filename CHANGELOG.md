@@ -8,7 +8,8 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
-- Highlight the active workspace and creation folder, restore folder selection, and show the destination when creating folders.
+- Animate sidebar toggles smoothly while respecting reduced-motion preferences.
+- Highlight the active workspace and creation folder, restore folder selection, and show the destination when creating folders. New Folder creates at the workspace root; subfolders use the context menu.
 - Organize materials in folders with one subfolder level while keeping original files untouched.
 - Remember shortcut sorting; assigned keybindings appear first by default.
 - Sort keyboard shortcuts by command, keybinding, activation context, or source.
@@ -39,6 +40,8 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Resize fitted PDFs continuously with their pane, then redraw sharply after resizing settles.
+- Hide and restore whiteboard controls in compact panes as well as large panes using the configured shortcut (Ctrl+H by default).
 - Expand unchanged older bundled theme files so title bars and study panes receive the selected palette instead of default-dark fallback colors.
 - Keep equal spacing around the workspace containers, including the left navigation edge.
 - Include the developer's name, license, project links, and application details in Debian packaging metadata.
