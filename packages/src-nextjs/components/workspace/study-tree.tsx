@@ -118,7 +118,7 @@ export function StudyTree({
         aria-haspopup="menu"
         aria-current={selectedId === document.id ? "true" : undefined}
         className={cn(
-          "min-w-0 gap-2 px-2 cursor-grab active:cursor-grabbing",
+          "min-w-0 gap-2 px-2 cursor-default",
           selectedId === document.id && "bg-sidebar-accent",
           dragging === document.id && "opacity-50",
         )}
@@ -303,7 +303,7 @@ export function StudyTree({
                   }}
                   onClick={(event) => onSelectDrawing(drawing.id, materialOpenTarget(event))}
                   className={cn(
-                    "min-w-0 cursor-grab gap-2 px-2",
+                    "min-w-0 cursor-default gap-2 px-2",
                     selectedId === drawing.id && "bg-sidebar-accent",
                   )}
                 >
