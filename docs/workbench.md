@@ -11,6 +11,13 @@ The palette includes material selection, whiteboard creation, navigation, prefer
 closing, and **Split Vertically** / **Split Horizontally**. Split commands create empty panes; selecting a material is a separate action. Disabled actions remain visible with their current shortcut.
 The maximum remains two columns, each with up to two rows.
 
+Commands are grouped by Workspace, Layout, Navigation, Preferences, and the active PDF/Whiteboard scope.
+Choose **Preferences: Color Theme** to open a searchable theme picker with System, Light themes, and Dark themes
+groups and a marker for the saved choice. The picker starts on that choice; moving the highlighted item
+previews its colors without writing preferences. Enter or click saves through the same configuration service as
+Appearance. Escape, dismissing the picker, or Back restores the saved theme; Back returns to commands. The picker command has a
+configurable `theme.select` key binding, unassigned by default.
+
 Navigation and title-bar controls, theme/window buttons, and PDF toolbar fields use shadcn Base UI tooltips
 on hover or keyboard focus. Command hints resolve the current preference binding, including custom overrides;
 an unassigned shortcut is omitted. Ctrl/Command labels follow the platform. The shared provider uses a
@@ -56,18 +63,31 @@ Useful defaults include `Mod+\` for a vertical split, `Mod+Shift+\` for a horizo
 
 ## Preferences
 
-Open **Preferences** from the palette or Settings. Choose Appearance, Key Bindings, or Canvas in the context navigation. Shortcuts can be typed or recorded, saved, disabled with an
-empty binding, or reset individually. Escape cancels recording. Conflicts are rejected for overlapping scopes;
-a PDF-only command and a whiteboard-only command may share a shortcut. Global printable shortcuts need a modifier
+Open **Preferences** from the palette or Settings. Commonly Used shows theme and canvas controls; All Settings
+shows every setting. Navigation groups Appearance, Key Bindings, and Canvas under Workbench, with Configuration
+and About under Application. Search starts across all settings; choose a category to narrow the results.
+Search matches titles, descriptions, theme names, and shortcut bindings. The Modified filter uses `@modified`
+to show preferences and shortcuts changed from their defaults. Modified settings have a small left marker.
+Only user settings exist; there are no workspace-level overrides.
+
+`lib/settings.ts` owns setting metadata and filtering; shared rows keep titles, descriptions, and controls
+consistent across category pages and search results. Configuration holds folder/reload/file management,
+and About holds application information.
+Key Bindings lists every registered command, including unassigned ones, in a searchable table with
+Keybinding, When, and Source columns. When describes fixed dispatch scopes (PDF, whiteboard, or application),
+not editable condition expressions. Source distinguishes Default from Custom overrides. Action availability
+still applies. Double-click a row or activate its edit button to record a combination; Enter saves and
+Escape cancels. The editor can remove a binding or reset it to its default. Different PDF and whiteboard
+commands can use the same combination because their scopes do not overlap. Key Bindings search stays within
+shortcuts; general settings search still spans categories. Conflicts are rejected for overlapping scopes.
+Global printable shortcuts need a modifier
 or a function key, so ordinary typing does not trigger application commands.
 
-Preferences use the `locus-preferences` local-storage record with schema version 2. They contain keyboard overrides
-and canvas-control visibility. Version 1 is read from `locus-preferences-v1` and migrated after validation;
-its original record remains intact. Existing custom shortcuts retain priority over changed defaults.
-The old drawing-properties shortcut migrates to the canvas-controls command, with all controls initially visible. Theme selection continues through next-themes.
-Changes save immediately after validation. Unsupported or malformed preferences are not overwritten automatically;
-the UI reports the error and offers an explicit reset. Storage failures are also reported.
-This storage boundary can later move to a native configuration file without changing command IDs.
+Desktop preferences and key bindings use separate versioned JSON files in the native configuration directory.
+The [configuration guide](configuration.md) owns paths, file schemas, theme palettes, migration, and recovery.
+The configuration provider supplies validated preferences to the workbench; command IDs remain unchanged.
+Changes save immediately after validation. Malformed files and detected external edits are preserved;
+correct the files and use Reload configuration. Legacy browser records remain available for recovery.
 
 ## Excalidraw controls
 

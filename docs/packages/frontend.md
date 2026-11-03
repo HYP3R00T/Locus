@@ -23,6 +23,8 @@ independent PDF view state, one live editor per whiteboard, and failed-save reco
 explicitly without a library backend. Do not introduce mock study data or upload behavior to disguise that boundary.
 
 [Workbench](../workbench.md) owns interaction and preference details; [storage](../storage.md) owns persisted semantics.
+The configuration provider consumes Rust-owned settings, scans themes while visible, and applies per-token palette fallback; [Configuration](../configuration.md)
+owns its native bridge, migration, and recovery contract. Update both sides when changing these file schemas.
 The [package manifest](../../packages/src-nextjs/package.json), [Next config](../../packages/src-nextjs/next.config.ts),
 and [UI config](../../packages/src-nextjs/components.json) own exact dependencies, static export, and component setup.
 Do not add request-time Next.js server features to the desktop architecture without an explicit architecture change.
@@ -48,3 +50,6 @@ Have the developer stop the checkout's development server before a production bu
 run native checks and exercise real desktop behavior as appropriate. Type checks do not prove file dialogs, rendering,
 input devices, or save recovery. There is no separate frontend behavior-test command configured in the manifest.
 Update this guide for local ownership changes, workbench/storage for behavior, and the public guide for usage changes.
+
+Settings metadata and search live in `lib/settings.ts`. Shared settings rows render the same controls in
+Commonly Used, category pages, and global search; navigation groups Workbench and Application settings.

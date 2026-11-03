@@ -168,7 +168,7 @@ On narrow screens the navigation moves into a sheet.
 Desktop windows use a custom draggable title bar with the theme toggle, minimize, maximize/restore, and close controls.
 The browser preview keeps ordinary browser controls. Sidebar toggles update layout immediately; PDF width fitting
 is deferred until width changes settle, avoiding repeated renders during resizing.
-Settings stays at the bottom of the application rail; Appearance offers System, Light, and Dark modes.
+Settings stays at the bottom of the application rail; Appearance groups light/dark palettes and Follow system.
 
 Create a workspace with the plus button in the application rail. Right-click the study tree to create a folder or add a PDF at the workspace root.
 Right-click a folder to add PDFs there. PDF, folder, and workspace context menus offer display-name changes
@@ -198,7 +198,7 @@ The sidebar colors, spacing, and tree connectors follow Console. Container frame
 Right-click the study tree or use **New Whiteboard** in the command palette to create an Excalidraw whiteboard. Whiteboards autosave as standard
 `.excalidraw` files and reopen from the tree. Normal window closing waits for saves; failed saves keep the window open.
 The title bar also offers a pane map, split controls, and the command palette (Ctrl+Shift+P, or Command+Shift+P on macOS).
-Preferences has separate Appearance, Key Bindings, and Canvas pages. Key Bindings offers shortcut recording,
+Preferences has searchable Workbench and Application groups, Commonly Used, and a Modified filter. Key Bindings offers shortcut recording,
 conflict checks, and per-command reset. Ctrl+W (Command+W on macOS) closes the active pane; the last one becomes empty.
 PDF scrollbars reserve their own lane; fit-to-width suppresses transient horizontal scrollbars during resizing.
 Excalidraw Library is hidden. Alt+P toggles the full canvas interface, including tools, properties, and footer controls. See [Workbench](workbench.md) for command scopes and preferences.

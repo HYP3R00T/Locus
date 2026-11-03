@@ -17,6 +17,7 @@ commands, and preferences. PDF pins, Markdown editing, and agents remain planned
 - [Project direction](project-direction.md): planned workflow, architecture boundaries, and prototype acceptance criteria.
 - [Storage](storage.md): file references, SQLite schema, and removal behavior.
 - [Workbench](workbench.md): command dispatch, pane layout, preferences, and rendering.
+- [Configuration](configuration.md): portable settings, key bindings, theme files, and migration.
 - [Releasing](releasing.md): versioning, changelog, and Debian packaging.
 - [Getting started](getting-started.md): commands, setup, developer-owned servers, and verification.
 - [Contributing](../CONTRIBUTING.md): contribution and review workflow.
