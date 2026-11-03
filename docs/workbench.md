@@ -157,8 +157,11 @@ correct the files and use Reload configuration. Legacy browser records remain av
 
 The Library trigger and sidebar remain hidden. **Toggle Canvas Controls** occupies a fixed title-bar slot left of
 the pane map. It is also available in the palette, Whiteboard preferences, or with `Mod+H` while a whiteboard is active.
-It hides or shows the whole Excalidraw UI layer: toolbar, properties, menus, zoom, undo/redo, help, and save status.
-The drawing canvas and its content remain available. Menus and dialogs close when the controls are hidden.
+It hides or shows the active whiteboard's whole UI layer: toolbar, properties, menus, zoom, undo/redo, help, and
+save status. Each board starts hidden unless **Show Canvas Controls by Default** is enabled in Whiteboard
+settings. Shortcut/title-bar toggles are temporary per-board state; they neither change that preference nor
+toggle other boards. Reopening a board reapplies the default. The canvas and its content remain available.
+Menus and dialogs close when the controls are hidden.
 
 Excalidraw's partial Zen mode is held off so it does not compete with this single visibility setting.
 One scoped CSS adapter targets the desktop `.layer-ui__wrapper` and compact `.App-top-bar` / `.App-bottom-bar`.

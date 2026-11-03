@@ -12,7 +12,7 @@ export function useSettingsCatalog() {
   return settingsCatalog({
     themeNames: themes.map((theme) => theme.name),
     theme: appearance.theme,
-    controlsVisible: preferences.whiteboardControlsVisible,
+    controlsVisible: preferences.whiteboardControlsVisibleByDefault,
     strokeColor: appearance.whiteboardStrokeColor,
     strokeWidth: appearance.whiteboardStrokeWidth,
     directory,

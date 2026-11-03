@@ -101,12 +101,12 @@ export function commandsForScope(scope: CommandScope | null) {
 export type Preferences = {
   version: 2;
   keybindings: Partial<Record<CommandId, string>>;
-  whiteboardControlsVisible: boolean;
+  whiteboardControlsVisibleByDefault: boolean;
 };
 export const DEFAULT_PREFERENCES: Preferences = {
   version: 2,
   keybindings: {},
-  whiteboardControlsVisible: true,
+  whiteboardControlsVisibleByDefault: false,
 };
 export const PREFERENCES_KEY = "locus-preferences";
 export const LEGACY_PREFERENCES_KEY = "locus-preferences-v1";
@@ -205,11 +205,19 @@ export function bindingProblem(
 }
 export function parsePreferences(raw: string, mac = false): Preferences {
   const parsed = JSON.parse(raw);
+  // Former visibility values were live toggles, not an opening preference.
+  const visibleByDefault =
+    parsed?.version === 1
+      ? false
+      : parsed?.whiteboardControlsVisibleByDefault === undefined &&
+          typeof parsed?.whiteboardControlsVisible === "boolean"
+        ? false
+        : parsed?.whiteboardControlsVisibleByDefault;
   if (
     (parsed?.version !== 1 && parsed?.version !== 2) ||
     (parsed.version === 1
       ? typeof parsed.whiteboardProperties !== "boolean"
-      : typeof parsed.whiteboardControlsVisible !== "boolean") ||
+      : typeof visibleByDefault !== "boolean") ||
     !parsed.keybindings ||
     typeof parsed.keybindings !== "object" ||
     Array.isArray(parsed.keybindings)
@@ -242,7 +250,7 @@ export function parsePreferences(raw: string, mac = false): Preferences {
   }
   const preferences: Preferences = {
     version: 2,
-    whiteboardControlsVisible: parsed.version === 1 ? true : parsed.whiteboardControlsVisible,
+    whiteboardControlsVisibleByDefault: visibleByDefault,
     keybindings,
   };
   if (

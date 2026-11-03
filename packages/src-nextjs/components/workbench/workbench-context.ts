@@ -9,7 +9,7 @@ export type WorkbenchInfo = {
   scope: "pdf" | "drawing" | null;
   columns: { id: string; panes: { id: string; title: string; kind: "pdf" | "drawing" | null }[] }[];
 };
-export type CommandHandler = { run: () => unknown; enabled?: boolean };
+export type CommandHandler = { run: () => unknown; enabled?: boolean; pressed?: boolean };
 export type MaterialOption = { id: string; title: string; open: () => void };
 type WorkbenchContextValue = {
   info: WorkbenchInfo;
@@ -24,6 +24,7 @@ type WorkbenchContextValue = {
   mac: boolean;
   perform: (id: CommandId) => void;
   enabled: (id: CommandId) => boolean;
+  pressed: (id: CommandId) => boolean;
   register: (
     owner: string,
     handlers: React.RefObject<Partial<Record<CommandId, CommandHandler>>>,
@@ -44,7 +45,7 @@ export function useCommandHandlers(
   const latest = useRef(handlers);
   latest.current = handlers;
   const signature = Object.entries(handlers)
-    .map(([id, handler]) => `${id}:${handler.enabled !== false}`)
+    .map(([id, handler]) => `${id}:${handler.enabled !== false}:${handler.pressed ?? false}`)
     .join(";");
   useEffect(() => {
     if (!signature) return;

@@ -55,7 +55,11 @@ pub struct Preferences {
     pub theme: String,
     pub light_theme: String,
     pub dark_theme: String,
-    pub whiteboard_controls_visible: bool,
+    #[serde(default)]
+    pub whiteboard_controls_visible_by_default: bool,
+    // The former field represented live UI state, not an opening preference.
+    #[serde(default, rename = "whiteboardControlsVisible", skip_serializing)]
+    _legacy_whiteboard_controls_visible: Option<bool>,
     #[serde(default = "default_whiteboard_stroke_color")]
     pub whiteboard_stroke_color: String,
     #[serde(default = "default_whiteboard_stroke_width")]
@@ -91,7 +95,8 @@ impl Default for Preferences {
             theme: "system".into(),
             light_theme: "default-light".into(),
             dark_theme: "default-dark".into(),
-            whiteboard_controls_visible: true,
+            whiteboard_controls_visible_by_default: false,
+            _legacy_whiteboard_controls_visible: None,
             whiteboard_stroke_color: default_whiteboard_stroke_color(),
             whiteboard_stroke_width: default_whiteboard_stroke_width(),
             primary_column: default_primary_column(),
@@ -449,7 +454,7 @@ mod tests {
         let config = Configuration::new(fixture.0.join("nested/locus"));
         let prefs = Preferences {
             theme: "default-dark".into(),
-            whiteboard_controls_visible: false,
+            whiteboard_controls_visible_by_default: false,
             ..Preferences::default()
         };
         let loaded = config
@@ -462,7 +467,7 @@ mod tests {
             }))
             .unwrap();
         assert_eq!(loaded.preferences.theme, "default-dark");
-        assert!(!loaded.preferences.whiteboard_controls_visible);
+        assert!(!loaded.preferences.whiteboard_controls_visible_by_default);
         assert_eq!(
             loaded.keybindings.bindings.get("palette").unwrap(),
             "Mod+Shift+Y"
@@ -685,7 +690,7 @@ mod tests {
         let config = Configuration::new(fixture.0.clone());
         config.load(None).unwrap();
         let path = fixture.0.join("preferences.json");
-        fs::write(&path, r#"{"version":1,"theme":"system","lightTheme":"default-light","darkTheme":"default-dark","whiteboardControlsVisible":true}"#).unwrap();
+        fs::write(&path, r#"{"version":1,"theme":"system","lightTheme":"default-light","darkTheme":"default-dark","whiteboardControlsVisibleByDefault":true}"#).unwrap();
         let loaded = config.load(None).unwrap();
         assert_eq!(loaded.preferences.primary_column, "left");
         assert_eq!(loaded.preferences.primary_row, "top");
@@ -720,6 +725,45 @@ mod tests {
         changed.notification_duration = 5000;
         changed.primary_row = "sideways".into();
         assert!(validate_preferences(&changed).is_err());
+    }
+    #[test]
+    fn opening_controls_default_is_separate_from_legacy_live_visibility() {
+        let fixture = Fixture::new();
+        let config = Configuration::new(fixture.0.clone());
+        let initial = config.load(None).unwrap().preferences;
+        assert!(!initial.whiteboard_controls_visible_by_default);
+        let path = fixture.0.join("preferences.json");
+        let mut old = serde_json::to_value(&initial).unwrap();
+        old.as_object_mut()
+            .unwrap()
+            .remove("whiteboardControlsVisibleByDefault");
+        old["whiteboardControlsVisible"] = serde_json::json!(true);
+        fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let migrated = config.load(None).unwrap().preferences;
+        assert!(!migrated.whiteboard_controls_visible_by_default);
+        let expected = serde_json::to_value(&migrated).unwrap();
+        let mut shown = migrated;
+        shown.whiteboard_controls_visible_by_default = true;
+        config
+            .save(
+                "preferences",
+                expected,
+                serde_json::to_value(&shown).unwrap(),
+            )
+            .unwrap();
+        assert!(
+            Configuration::new(fixture.0.clone())
+                .load(None)
+                .unwrap()
+                .preferences
+                .whiteboard_controls_visible_by_default
+        );
+        assert!(
+            read_json(&path)
+                .unwrap()
+                .get("whiteboardControlsVisible")
+                .is_none()
+        );
     }
     #[test]
     fn whiteboard_defaults_upgrade_persist_and_validate_without_touching_themes() {
