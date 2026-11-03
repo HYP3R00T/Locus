@@ -40,6 +40,10 @@ Missing or removed materials leave empty slots. PDF zoom currently reopens in fi
 widths and the selected Settings page are not part of the saved workspace session.
 
 Commands are grouped by Workspace, Layout, Navigation, Preferences, and the active PDF/Whiteboard scope.
+The expanded materials panel places **Add PDF** and **New whiteboard** buttons at its header's right edge,
+with the collapse control on the left.
+They use the same commands and shortcut-aware tooltips as the command palette. Add PDF targets the selected
+folder; new whiteboards belong to the current workspace. These buttons are hidden in collapsed and Settings navigation.
 Choose **Preferences: Color Theme** to open a searchable theme picker with System, Light themes, and Dark themes
 groups and a marker for the saved choice. The picker starts on that choice; moving the highlighted item
 previews its colors without writing preferences. Enter or click saves through the same configuration service as
