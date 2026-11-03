@@ -195,10 +195,11 @@ On the affected Linux system, both HTML settings text and PDF canvases alternate
 at different scroll positions, even at 100% display scaling. Disabling accelerated compositing removed the
 blur; disabling only DMA-BUF also removed it. The latter keeps accelerated compositing available.
 
-Linux startup supplies `WEBKIT_DISABLE_DMABUF_RENDERER=1` before GTK initialization, unless the environment
-explicitly overrides it. Windows and macOS are unchanged. Set the value to `0` to test the original buffer path.
-No font-rendering overrides or full compositing disable are applied. This workaround resolved interface blur,
-but later checks still showed soft PDF rendering. See
+The DMA-BUF override was subsequently found to cause sluggish whiteboard drawing: desktop testing with
+`WEBKIT_DISABLE_DMABUF_RENDERER=0` restored smooth drawing. Locus now leaves renderer selection to WebKitGTK
+and does not set graphics environment variables. The previous blur workaround remains an explicit diagnostic
+option, not a startup default. Text/PDF clarity should be checked alongside drawing responsiveness on the
+default renderer. Windows and macOS are unchanged. See
 [Tauri's Linux graphics guidance](https://tauri-v2.netlify.app/develop/debug/linux-graphics/) for the tradeoffs.
 
 PDF.js page dimensions describe the content box, including when rounded to its canvas pixel grid.

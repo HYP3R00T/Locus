@@ -47,6 +47,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Restore smooth Linux whiteboard drawing by removing the forced WebKitGTK DMA-BUF renderer override.
 - Use square corners for navigation, study panes, resize gutters, and pane drop previews.
 - Resize fitted PDFs continuously with their pane, then redraw sharply after resizing settles.
 - Hide and restore whiteboard controls in compact panes as well as large panes using the configured shortcut (Ctrl+H by default).
