@@ -42,6 +42,8 @@ identifier-based application-config directory; logs and study data also keep the
     "lightTheme": "default-light",
     "darkTheme": "default-dark",
     "whiteboardControlsVisible": true,
+    "whiteboardStrokeColor": "#1971c2",
+    "whiteboardStrokeWidth": 1,
     "primaryColumn": "left",
     "primaryRow": "top",
     "notificationDuration": 3000,
@@ -53,6 +55,12 @@ identifier-based application-config directory; logs and study data also keep the
 theme. Follow system chooses between `lightTheme` and `darkTheme`. The title-bar toggle switches between
 the remembered pair. Missing or mismatched themes fall back to the default mode with an Appearance warning;
 the stored selection is preserved.
+
+`whiteboardStrokeColor` is an opaque `#RRGGBB` ink color. `whiteboardStrokeWidth` accepts Excalidraw's
+three standard widths: `1` (thin), `2` (medium), or `4` (thick). Missing values in older files default to
+blue and thin. **Settings → Whiteboard** provides the standard color palette, a hex field, and width buttons.
+Defaults apply when opening a board, including restored boards; they do not rewrite existing marks or
+replace tool choices in an already-open editor.
 
 `primaryColumn` is `left` or `right`; `primaryRow` is `top` or `bottom`. Modifier-clicks target the
 other side; these preferences do not lock ordinary pane selection. `notificationDuration` accepts 3000,
@@ -148,8 +156,14 @@ Source templates and installed templates contain the same explicit colors.
 
 These are semantic roles, not a separate property for every HTML element. Controls reuse the same
 roles to keep contrast and selection behavior consistent. PDFs retain their original page colors.
-Excalidraw follows light/dark mode but does not receive the custom interface palette;
-saved drawing content is unaffected.
+Excalidraw's controls reuse interface roles through its supported CSS variables. Its on-screen canvas uses
+a transparent drawing layer over `pane-background`, following the Locus palette in both modes.
+Autosave preserves the file's background color and existing strokes. The canvas background picker is hidden;
+built-in image exports have transparent paper because the CSS theme background is display-only.
+The standard stroke color and width controls remain unchanged. Every whiteboard opens with the freehand pen
+and the configured ink and width, overriding saved tool defaults. Blue ink and thin strokes are the initial
+preferences. Tool changes remain local to an open editor; reopening a board restores the configured defaults.
+Existing strokes retain their original colors and widths.
 
 Earlier eight-role palettes remain readable. Their `surface`, `mutedForeground`, and
 `accentForeground` keys identify the legacy mapping; legacy `accent` maps to `primary`.

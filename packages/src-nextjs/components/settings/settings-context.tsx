@@ -13,6 +13,8 @@ export function useSettingsCatalog() {
     themeNames: themes.map((theme) => theme.name),
     theme: appearance.theme,
     controlsVisible: preferences.whiteboardControlsVisible,
+    strokeColor: appearance.whiteboardStrokeColor,
+    strokeWidth: appearance.whiteboardStrokeWidth,
     directory,
     primaryColumn: appearance.primaryColumn,
     primaryRow: appearance.primaryRow,

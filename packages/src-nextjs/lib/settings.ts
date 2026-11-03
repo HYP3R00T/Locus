@@ -21,6 +21,8 @@ export function settingsCatalog(input: {
   themeNames: string[];
   theme: string;
   controlsVisible: boolean;
+  strokeColor: string;
+  strokeWidth: number;
   directory: string | null;
   primaryColumn?: "left" | "right";
   primaryRow?: "top" | "bottom";
@@ -71,6 +73,24 @@ export function settingsCatalog(input: {
       description: "Show drawing tools, properties, menus, zoom, and undo/redo on whiteboards.",
       keywords: ["whiteboard", "Excalidraw", "drawing", "pen", "interface"],
       modified: !input.controlsVisible,
+    },
+    {
+      id: "canvas.strokeColor",
+      section: "canvas",
+      title: "Default Pen Color",
+      description:
+        "Choose the ink used when a whiteboard opens. Swatches match Excalidraw's light/dark color treatment. Existing marks are unchanged.",
+      keywords: ["ink", "stroke", "blue", "palette", input.strokeColor],
+      modified: input.strokeColor.toLowerCase() !== "#1971c2",
+    },
+    {
+      id: "canvas.strokeWidth",
+      section: "canvas",
+      title: "Default Stroke Width",
+      description:
+        "Choose the starting pen width for whiteboards. Applies when a board opens; changes made in an open board remain local to that board.",
+      keywords: ["pen", "thin", "medium", "thick", "drawing"],
+      modified: input.strokeWidth !== 1,
     },
     {
       id: "configuration.folder",

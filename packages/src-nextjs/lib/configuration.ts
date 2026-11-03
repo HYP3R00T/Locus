@@ -10,6 +10,8 @@ export type Appearance = {
   lightTheme: string;
   darkTheme: string;
   whiteboardControlsVisible: boolean;
+  whiteboardStrokeColor: string;
+  whiteboardStrokeWidth: 1 | 2 | 4;
   primaryColumn: "left" | "right";
   primaryRow: "top" | "bottom";
   notificationDuration: number;
@@ -29,6 +31,8 @@ export const DEFAULT_APPEARANCE: Appearance = {
   lightTheme: "default-light",
   darkTheme: "default-dark",
   whiteboardControlsVisible: true,
+  whiteboardStrokeColor: "#1971c2",
+  whiteboardStrokeWidth: 1,
   primaryColumn: "left",
   primaryRow: "top",
   notificationDuration: 3000,

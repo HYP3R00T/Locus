@@ -165,6 +165,16 @@ One scoped CSS adapter targets the desktop `.layer-ui__wrapper` and compact `.Ap
 Excalidraw chooses its compact layout from each pane's width and height, independently of the application window.
 Review these selectors when upgrading Excalidraw.
 These UI preferences do not alter drawing elements or saved scene files.
+Toolbars, menus, inputs, selection states, and focus rings inherit the app's palette through scoped
+Excalidraw CSS variables. The canvas paper follows `pane-background`; theme changes do not recolor strokes.
+Autosave preserves the file's paper color. The per-canvas background picker is hidden, and built-in image
+exports use transparent paper. Native color and width controls are retained without an additional ink menu.
+Every whiteboard opens with the freehand pen and the color/width configured in **Settings → Whiteboard**.
+The initial defaults are blue ink and the thinnest standard stroke width. These defaults
+apply to restored boards too, without changing existing strokes. Tool changes remain local while a board is
+open; reopening it reapplies the writing defaults. Tools are not synchronized between whiteboards.
+The settings palette mirrors Excalidraw 0.18's opaque stroke colors without loading the editor bundle;
+review it and the dark-mode swatch filter when upgrading Excalidraw.
 
 ## PDF links and wheel zoom
 

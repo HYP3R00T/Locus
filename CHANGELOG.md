@@ -8,6 +8,8 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Match whiteboard controls and canvas paper to the app theme, retaining the standard drawing controls.
+- Open whiteboards with the pen selected; choose default ink color and stroke width in Whiteboard settings.
 - Record local millisecond startup timings for restoration, lazy imports, pane painting, and final reveal.
 - Prepare the first and saved PDF pages concurrently when restoring a reading session.
 - Avoid unnecessary whiteboard updates during session restoration and defer the settings editor until opened.

@@ -238,6 +238,54 @@
   border-color: transparent;
 }
 
+.locus-whiteboard .excalidraw {
+  background-color: var(--pane-background);
+}
+
+/* Include Excalidraw dialogs portaled outside the pane, while keeping the
+   adapter scoped to Locus's applied theme and separate from drawing colors. */
+html[data-locus-theme] .excalidraw,
+html[data-locus-theme] .excalidraw.theme--dark {
+  --color-primary: var(--primary);
+  --color-primary-darker: var(--primary);
+  --color-primary-darkest: var(--primary);
+  --color-primary-hover: var(--primary);
+  --color-primary-light: var(--accent);
+  --color-primary-light-darker: var(--accent);
+  --color-primary-contrast-offset: var(--primary);
+  --color-on-primary-container: var(--primary-foreground);
+  --color-surface-primary-container: var(--primary);
+  --color-surface-primary-container-hover: var(--primary);
+  --color-brand-hover: var(--primary);
+  --color-brand-active: var(--primary);
+  --color-on-surface: var(--foreground);
+  --color-surface-lowest: var(--background);
+  --color-surface-low: var(--secondary);
+  --color-surface-mid: var(--muted);
+  --color-surface-high: var(--accent);
+  --color-border-outline: var(--border);
+  --color-border-outline-variant: var(--border);
+  --default-bg-color: var(--background);
+  --island-bg-color: var(--popover);
+  --popup-bg-color: var(--popover);
+  --popup-secondary-bg-color: var(--muted);
+  --popup-text-color: var(--popover-foreground);
+  --input-bg-color: var(--background);
+  --input-border-color: var(--input);
+  --input-hover-bg-color: var(--accent);
+  --input-label-color: var(--muted-foreground);
+  --text-primary-color: var(--foreground);
+  --keybinding-color: var(--muted-foreground);
+  --icon-fill-color: var(--foreground);
+  --focus-highlight-color: var(--ring);
+  --button-hover-bg: var(--accent);
+  --button-active-bg: var(--accent);
+  --button-active-border: var(--ring);
+  --default-border-color: var(--border);
+  --sidebar-border-color: var(--border);
+  --link-color: var(--primary);
+}
+
 /* Compact panes render separate top/bottom bars instead of the desktop UI wrapper. */
 .locus-whiteboard[data-controls-visible="false"] .layer-ui__wrapper,
 .locus-whiteboard[data-controls-visible="false"] .App-top-bar,

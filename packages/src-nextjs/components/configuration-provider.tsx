@@ -34,7 +34,15 @@ type ConfigurationContextValue = {
   updatePreferences: (value: Preferences) => Promise<void>;
   updateAppearance: (
     value: Partial<
-      Pick<Appearance, "primaryColumn" | "primaryRow" | "notificationDuration" | "shortcutSort">
+      Pick<
+        Appearance,
+        | "primaryColumn"
+        | "primaryRow"
+        | "notificationDuration"
+        | "shortcutSort"
+        | "whiteboardStrokeColor"
+        | "whiteboardStrokeWidth"
+      >
     >,
   ) => Promise<boolean>;
   selectTheme: (id: string) => Promise<boolean>;

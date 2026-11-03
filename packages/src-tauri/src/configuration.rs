@@ -56,6 +56,10 @@ pub struct Preferences {
     pub light_theme: String,
     pub dark_theme: String,
     pub whiteboard_controls_visible: bool,
+    #[serde(default = "default_whiteboard_stroke_color")]
+    pub whiteboard_stroke_color: String,
+    #[serde(default = "default_whiteboard_stroke_width")]
+    pub whiteboard_stroke_width: u8,
     #[serde(default = "default_primary_column")]
     pub primary_column: String,
     #[serde(default = "default_primary_row")]
@@ -64,6 +68,12 @@ pub struct Preferences {
     pub notification_duration: u32,
     #[serde(default)]
     pub shortcut_sort: ShortcutSort,
+}
+fn default_whiteboard_stroke_color() -> String {
+    "#1971c2".into()
+}
+fn default_whiteboard_stroke_width() -> u8 {
+    1
 }
 fn default_primary_column() -> String {
     "left".into()
@@ -82,6 +92,8 @@ impl Default for Preferences {
             light_theme: "default-light".into(),
             dark_theme: "default-dark".into(),
             whiteboard_controls_visible: true,
+            whiteboard_stroke_color: default_whiteboard_stroke_color(),
+            whiteboard_stroke_width: default_whiteboard_stroke_width(),
             primary_column: default_primary_column(),
             primary_row: default_primary_row(),
             notification_duration: default_notification_duration(),
@@ -152,6 +164,12 @@ fn validate_preferences(value: &Preferences) -> Result<(), String> {
         || !matches!(value.primary_column.as_str(), "left" | "right")
         || !matches!(value.primary_row.as_str(), "top" | "bottom")
         || ![0, 3000, 5000, 8000].contains(&value.notification_duration)
+        || ![1, 2, 4].contains(&value.whiteboard_stroke_width)
+        || value.whiteboard_stroke_color.len() != 7
+        || !value.whiteboard_stroke_color.starts_with('#')
+        || !value.whiteboard_stroke_color[1..]
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit())
         || value.version != 1
         || !identifier(&value.theme)
         || !identifier(&value.light_theme)
@@ -702,6 +720,68 @@ mod tests {
         changed.notification_duration = 5000;
         changed.primary_row = "sideways".into();
         assert!(validate_preferences(&changed).is_err());
+    }
+    #[test]
+    fn whiteboard_defaults_upgrade_persist_and_validate_without_touching_themes() {
+        let fixture = Fixture::new();
+        let config = Configuration::new(fixture.0.clone());
+        config.load(None).unwrap();
+        let path = fixture.0.join("preferences.json");
+        let mut old = read_json(&path).unwrap();
+        old.as_object_mut().unwrap().remove("whiteboardStrokeColor");
+        old.as_object_mut().unwrap().remove("whiteboardStrokeWidth");
+        fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let loaded = config.load(None).unwrap().preferences;
+        assert_eq!(loaded.whiteboard_stroke_color, "#1971c2");
+        assert_eq!(loaded.whiteboard_stroke_width, 1);
+        let expected = serde_json::to_value(&loaded).unwrap();
+        let mut changed = loaded.clone();
+        changed.whiteboard_stroke_color = "#e03131".into();
+        changed.whiteboard_stroke_width = 4;
+        config
+            .save(
+                "preferences",
+                expected,
+                serde_json::to_value(&changed).unwrap(),
+            )
+            .unwrap();
+        let reopened = Configuration::new(fixture.0.clone())
+            .load(None)
+            .unwrap()
+            .preferences;
+        assert_eq!(reopened.whiteboard_stroke_color, "#e03131");
+        assert_eq!(reopened.whiteboard_stroke_width, 4);
+        assert_eq!(reopened.theme, loaded.theme);
+        let saved = fs::read(&path).unwrap();
+        let expected = serde_json::to_value(&reopened).unwrap();
+        for color in ["red", "#12345g", "#123", "#12345678", "transparent"] {
+            let mut invalid = reopened.clone();
+            invalid.whiteboard_stroke_color = color.into();
+            assert!(
+                config
+                    .save(
+                        "preferences",
+                        expected.clone(),
+                        serde_json::to_value(&invalid).unwrap()
+                    )
+                    .is_err()
+            );
+            assert_eq!(fs::read(&path).unwrap(), saved);
+        }
+        for width in [0, 3, 5, 255] {
+            let mut invalid = reopened.clone();
+            invalid.whiteboard_stroke_width = width;
+            assert!(
+                config
+                    .save(
+                        "preferences",
+                        expected.clone(),
+                        serde_json::to_value(&invalid).unwrap()
+                    )
+                    .is_err()
+            );
+            assert_eq!(fs::read(&path).unwrap(), saved);
+        }
     }
     #[test]
     fn shortcut_sort_defaults_persist_and_reject_invalid_columns() {
