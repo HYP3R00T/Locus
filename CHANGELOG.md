@@ -53,6 +53,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Keep PDF painting in a viewport-sized layer to prevent sharpness changing between scroll positions.
 - Enforce horizontal overflow suppression in PDF fit-to-width mode.
 - Use persistent PDF scrollbar thumbs so the scroll position remains visible instead of disappearing after scrolling.
 - Initialize the PDF.js engine before its viewer so packaged apps can open PDFs reliably.
