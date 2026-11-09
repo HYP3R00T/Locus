@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
 @import "tw-animate-css";
-@import "pdfjs-dist/web/pdf_viewer.css";
+@import "react-pdf/dist/Page/AnnotationLayer.css";
+@import "react-pdf/dist/Page/TextLayer.css";
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -198,12 +199,6 @@
   background: var(--pane-background);
 }
 
-/* PDF.js sizes pages as content boxes. Preflight's border-box shrinks the
-   canvas wrapper by the page border and resamples the entire rendered bitmap. */
-.locus-pdf-viewer .page {
-  box-sizing: content-box;
-}
-
 /* Base UI draws the thumb in the document, avoiding WebKit's overlay paint path.
    The viewport reserves a fixed lane so PDF fit geometry does not depend on it. */
 .locus-pdf-scroll {
@@ -276,10 +271,6 @@ html[data-locus-theme] .excalidraw.theme--dark {
 .locus-whiteboard[data-controls-visible="false"] .App-bottom-bar,
 .locus-whiteboard .locus-disabled-library {
   display: none;
-}
-
-.locus-pdf-scroll[data-fit-width="true"] {
-  overflow-x: hidden;
 }
 
 /* Navigation columns share a single outline, with their resize boundary inside it. */

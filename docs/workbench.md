@@ -27,14 +27,15 @@ WebKit overlay scrollbar painting. A fixed vertical lane preserves fit geometry.
 while content overflows, including when idle; during startup they stay hidden until reveal.
 Other native scrollbar thumbs are transparent until reveal.
 Startup markers go to the existing native log; see [timing diagnostics](packages/native.md#window-state-and-local-diagnostics).
-PDF engine import and metadata access begin concurrently. Viewer import waits for the engine to publish
-`globalThis.pdfjsLib`, which the viewer reads during module evaluation; loading both independently can fail
-in packaged production chunks with an undefined `AbortException` import. Viewer loading still overlaps PDF parsing.
-After parsing, page 1 and the saved page are requested concurrently. The saved page's geometry is installed
-before restoring the view, avoiding a sequential first-page-then-saved-page request. A separate startup marker
-records when these page prerequisites are ready; performance gains require a measured comparison.
-PDF byte-range loading keeps automatic full-document fetching disabled; startup waits for restored visible content,
-not rendering every page. Excalidraw remains dynamically imported only when a drawing pane is present.
+The client-only PDF reader uses React-PDF's `Document` and `Page` components, with PDF.js underneath.
+The engine initializes before the React-PDF module because its link service imports PDF.js web helpers.
+The worker, character maps, font substitutes, and WASM assets are bundled locally from the same PDF.js version;
+no CDN or document upload is involved. Rust still validates metadata and serves bounded byte ranges by document ID.
+After parsing, the reader requests page 1 and the saved page concurrently before restoring the view.
+Only pages within one viewport above/below the visible region mount canvases, text, and annotation layers.
+Other pages retain lightweight geometry placeholders. Unknown page dimensions initially use page 1's size;
+measuring nearby pages corrects their geometry while preserving the current page and fractional position.
+Automatic full-document fetching stays disabled. Excalidraw remains dynamically imported only when needed.
 Excalidraw callbacks, menu children, and UI options retain their identity across wrapper/status updates.
 Its `onChange` runs after editor updates, so recreating these props can feed readiness/save-status changes
 back into unnecessary editor updates. Genuine scene changes and resizing still recheck startup readiness.
@@ -100,10 +101,17 @@ Custom SVG uploads and emoji icons are not implemented.
 
 PDF fit-to-width follows its pane, reserves a vertical scrollbar lane, and suppresses temporary horizontal overflow
 while resizing. Fixed zoom and fit-to-height still allow horizontal scrolling when the page is wider than its pane.
-Fit modes follow pane resizing through PDF.js's delayed zoom API, temporarily reusing rendered canvases.
-After 150 ms without resizing, the exact fit preset is restored and the PDF redraws sharply.
-The fit calculation follows PDF.js's continuous, single-page layout padding (40px horizontal, 5px vertical);
-review it if upgrading PDF.js or introducing spreads, horizontal page layout, or borderless pages.
+The viewport sets overflow axes through Base UI's style prop so its inline overflow default cannot override fit mode.
+Fit modes use the first page's unscaled dimensions and the current pane, with 16px side insets and 12px page gaps.
+During resizing or wheel zoom, existing page layers scale temporarily. After 150ms without another size change,
+React-PDF redraws at the final scale and the preview transform clears. At rest, React-PDF owns the canvas
+and text-layer sizing; there are no persistent image-sampling overrides. Each canvas follows device pixel ratio,
+subject to a 16-megapixel limit to bound memory at high zoom or on high-density displays.
+The page canvas ref creates its 2D context with `alpha: false` and `willReadFrequently: true` before
+React-PDF's drawing effect. WebKit uses this flag to select an unaccelerated page buffer; the setting
+is per canvas and does not change Excalidraw or WebView-wide compositing. This targets the graphics path
+without modifying document pixels, zoom, or scroll offsets. Its effect on native scrolling clarity and
+PDF paint time still requires desktop verification.
 
 ## Keyboard scopes
 
@@ -190,7 +198,9 @@ review it and the dark-mode swatch filter when upgrading Excalidraw.
 
 ## PDF links and wheel zoom
 
-PDF.js's annotation layer and `PDFLinkService` handle document destinations, including contents-page links.
+React-PDF's annotation layer resolves document links; the reader handles destination scrolling, including
+links to pages whose canvases are currently unmounted. Page destinations retain their PDF vertical coordinate.
+
 Click or Ctrl+click navigates within the same PDF pane while retaining its current zoom. External HTTP,
 HTTPS, email, and telephone links open in their system default applications through Tauri's opener plugin.
 Its capability grants URL opening only, without file-opening or directory-reveal access. Failed opens show
@@ -199,7 +209,7 @@ an error in the viewer. The source PDF remains unchanged.
 Ctrl+scroll zooms the PDF under the pointer from 25% to 500%, leaving fit mode and keeping the pointer as
 the zoom origin. Ordinary scrolling remains unchanged. The listener is non-passive and limited to the PDF
 scroll area, preventing the WebView's document-level zoom. High-frequency gestures defer canvas redraws
-briefly through PDF.js's zoom API, then rerender at the final scale.
+briefly with a temporary page-layer preview, then rerender at the final scale.
 
 ## Overlay rendering
 
@@ -224,12 +234,10 @@ option, not a startup default. Text/PDF clarity should be checked alongside draw
 default renderer. Windows and macOS are unchanged. See
 [Tauri's Linux graphics guidance](https://tauri-v2.netlify.app/develop/debug/linux-graphics/) for the tradeoffs.
 
-PDF.js page dimensions describe the content box, including when rounded to its canvas pixel grid.
-The scoped `.locus-pdf-viewer .page` rule restores `box-sizing: content-box` against Tailwind Preflight.
-Without it, PDF.js's 9px page borders reduce the canvas wrapper by 18px in each dimension, rescaling the
-bitmap and misaligning the text layer. Native Linux scrolling was confirmed sharp and consistent after
-this correction. The rule applies on every platform; native Windows rendering still needs verification
-on Windows hardware.
+The previous imperative PDF.js viewer and its page-border sizing override have been removed.
+React-PDF supplies its own canvas, text, and annotation layers with the upstream stylesheets.
+This migration changes viewer integration, not the underlying PDF engine. Type and geometry checks do not
+establish that position-dependent blur is fixed; native scrolling and installed-package behavior need verification.
 
 Whiteboard files load from a mounted effect. Results from cancelled loads are ignored; a failed load offers a retry
 and never opens an empty editable canvas that could overwrite the original drawing.

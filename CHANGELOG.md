@@ -8,6 +8,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Added
 
+- Replace the imperative PDF viewer with React-PDF page, text, and annotation layers while retaining native range reads, pane controls, links, and saved reading positions.
 - Choose between removing a whiteboard reference and permanently deleting its drawing file, with explanations in the removal dialog.
 - Add PDFs and create whiteboards directly from the expanded materials panel header.
 - Start whiteboards with controls hidden by default; configure opening visibility separately from per-board shortcut toggles.
@@ -52,6 +53,7 @@ Locus is in early development. The current development version is **0.1.0**; it 
 
 ### Fixed
 
+- Enforce horizontal overflow suppression in PDF fit-to-width mode.
 - Use persistent PDF scrollbar thumbs so the scroll position remains visible instead of disappearing after scrolling.
 - Initialize the PDF.js engine before its viewer so packaged apps can open PDFs reliably.
 - Restore smooth Linux whiteboard drawing by removing the forced WebKitGTK DMA-BUF renderer override.

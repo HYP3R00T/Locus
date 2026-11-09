@@ -11,7 +11,7 @@ and [architecture](../architecture.md). Rust owns persistence; this package owns
 | ------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [App](../../packages/src-nextjs/app/)                                     | Routes, global layout, theme, and Tailwind styles            |
 | [Layout components](../../packages/src-nextjs/components/layout/)         | App shell, navigation, title bar, normal close lifecycle     |
-| [Workspace components](../../packages/src-nextjs/components/workspace/)   | Library actions, PDF.js reader, Excalidraw editor            |
+| [Workspace components](../../packages/src-nextjs/components/workspace/)   | Library actions, React-PDF reader, Excalidraw editor         |
 | [Workbench components](../../packages/src-nextjs/components/workbench/)   | Command registry, preferences, shortcuts, title-bar controls |
 | [Library bridge](../../packages/src-nextjs/lib/library.ts)                | Typed native actions and desktop/browser boundary            |
 | [Drawing bridge](../../packages/src-nextjs/lib/drawings.ts)               | Ordered saves, pending edits, flush registration             |
@@ -64,3 +64,8 @@ Diagnostics are fire-and-forget, never block startup, stop after reveal, and do 
 Navigation response start/end and DOM-interactive timestamps distinguish document delivery from frontend mounting.
 The collector survives Fast Refresh and stops after reveal. Compare actual launches, not hot reloads;
 keep cold development-route compilation separate from warm launches. Detailed investigation probes have been removed.
+
+The PDF entry point dynamically imports `pdf-reader-content.tsx` without SSR. That component owns the
+React-PDF document lifecycle, native range transport, virtualized page layers, links, zoom, and position saves.
+`lib/pdf-layout.ts` contains page geometry and anchor conversion shared by scrolling and restoration.
+Keep the direct PDF.js dependency aligned with React-PDF's engine so the local worker matches its API.
