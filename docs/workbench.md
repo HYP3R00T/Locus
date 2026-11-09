@@ -112,6 +112,13 @@ React-PDF's drawing effect. WebKit uses this flag to select an unaccelerated pag
 is per canvas and does not change Excalidraw or WebView-wide compositing. This targets the graphics path
 without modifying document pixels, zoom, or scroll offsets. Its effect on native scrolling clarity and
 PDF paint time still requires desktop verification.
+PDF page layers live in a viewport-sized sticky surface inside the native scroll container. The native
+content element supplies the full scroll dimensions, while only nearby pages are positioned relative
+to the current viewport offset. This keeps the painted page surface bounded instead of translating a
+book-sized painting layer through native scrolling. Scrollbars, wheel/touch input, and text selection
+retain the native scroll ancestor. Desktop development testing on the affected Linux system confirmed
+consistent sharpness at the previously alternating scroll positions and normal scrolling. Installed-build,
+Windows, and macOS verification remain separate.
 
 ## Keyboard scopes
 

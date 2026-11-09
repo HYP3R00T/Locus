@@ -84,6 +84,7 @@ export function PdfReaderContent({
   const [pdf, setPdf] = useState<PDFDocumentProxy>();
   const [sizes, setSizes] = useState<PageSize[]>([]);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   const [pageIndex, setPageIndex] = useState(document.pageIndex);
   const [visible, setVisible] = useState({ first: document.pageIndex, last: document.pageIndex });
   const [zoomPreset, setZoomPreset] = useState<FitMode | null>("page-width");
@@ -100,6 +101,10 @@ export function PdfReaderContent({
   const [renderZoom, setRenderZoom] = useState(zoom);
   const offsets = useMemo(() => pageOffsets(sizes, zoom), [sizes, zoom]);
   const count = sizes.length;
+  const contentWidth = Math.max(
+    viewport.width,
+    Math.max(0, ...sizes.map((size) => size.width * zoom)) + PAGE_INSET * 2,
+  );
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -242,7 +247,17 @@ export function PdfReaderContent({
       if (mounted.current) setPositionError(String(failure));
     });
   }, []);
+  const updateScrollOffset = useCallback(() => {
+    const container = scroll.current;
+    if (!container) return;
+    setScrollOffset((previous) =>
+      previous.x === container.scrollLeft && previous.y === container.scrollTop
+        ? previous
+        : { x: container.scrollLeft, y: container.scrollTop },
+    );
+  }, []);
   function trackScroll() {
+    updateScrollOffset();
     updateVisible();
     const container = scroll.current;
     const current = state.current;
@@ -296,6 +311,7 @@ export function PdfReaderContent({
       pendingLeft.current = null;
     }
     updateVisible();
+    updateScrollOffset();
     let second = 0;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => {
@@ -307,7 +323,7 @@ export function PdfReaderContent({
       cancelAnimationFrame(first);
       cancelAnimationFrame(second);
     };
-  }, [sizes, offsets, zoom, viewport.width, checkReady, updateVisible]);
+  }, [sizes, offsets, zoom, viewport.width, checkReady, updateVisible, updateScrollOffset]);
 
   useEffect(() => {
     const container = scroll.current;
@@ -619,77 +635,83 @@ export function PdfReaderContent({
           style={{ overflowX: zoomPreset === "page-width" ? "hidden" : "auto", overflowY: "auto" }}
           tabIndex={0}
         >
-          <ScrollArea.Content className="locus-pdf-pages" style={{ minWidth: 0 }}>
-            {source && (
-              <Document
-                file={source}
-                options={options}
-                suspense={false}
-                loading={null}
-                error={null}
-                onLoadSuccess={loadDocument}
-                onLoadError={fail}
-                onSourceError={fail}
-                onPassword={askPassword}
-                onItemClick={followLink}
-                externalLinkTarget="_blank"
-              >
-                <div
-                  style={{
-                    height: offsets.at(-1) ?? 0,
-                    minWidth:
-                      Math.max(0, ...sizes.map((size) => size.width * zoom)) + PAGE_INSET * 2,
-                    position: "relative",
-                  }}
+          <ScrollArea.Content
+            className="locus-pdf-pages"
+            style={{ height: offsets.at(-1) ?? 0, width: contentWidth, minWidth: 0 }}
+          >
+            <div
+              className="sticky top-0 left-0 overflow-hidden"
+              style={{ width: viewport.width, height: viewport.height }}
+            >
+              {source && (
+                <Document
+                  file={source}
+                  options={options}
+                  suspense={false}
+                  loading={null}
+                  error={null}
+                  onLoadSuccess={loadDocument}
+                  onLoadError={fail}
+                  onSourceError={fail}
+                  onPassword={askPassword}
+                  onItemClick={followLink}
+                  externalLinkTarget="_blank"
                 >
-                  {sizes.map((size, index) => (
-                    <div
-                      // biome-ignore lint/suspicious/noArrayIndexKey: PDF page numbers never reorder.
-                      key={index}
-                      className="locus-pdf-page"
-                      style={{
-                        position: "absolute",
-                        top: offsets[index],
-                        width: size.width * zoom,
-                        height: size.height * zoom,
-                        left: "50%",
-                        marginLeft: (-size.width * zoom) / 2,
-                      }}
-                    >
-                      {index >= visible.first && index <= visible.last && (
+                  <div
+                    style={{
+                      height: viewport.height,
+                      width: viewport.width,
+                      position: "relative",
+                    }}
+                  >
+                    {sizes.slice(visible.first, visible.last + 1).map((size, relativeIndex) => {
+                      const index = visible.first + relativeIndex;
+                      return (
                         <div
+                          key={index}
+                          className="locus-pdf-page"
                           style={{
-                            transform:
-                              zoom === renderZoom ? undefined : `scale(${zoom / renderZoom})`,
-                            transformOrigin: "top left",
+                            position: "absolute",
+                            top: offsets[index] - scrollOffset.y,
+                            width: size.width * zoom,
+                            height: size.height * zoom,
+                            left: (contentWidth - size.width * zoom) / 2 - scrollOffset.x,
                           }}
                         >
-                          <Page
-                            canvasRef={preparePageCanvas}
-                            pageNumber={index + 1}
-                            scale={renderZoom}
-                            suspense={false}
-                            loading={null}
-                            error={<p role="alert">Could not render page {index + 1}.</p>}
-                            onLoadSuccess={measurePage}
-                            onLoadError={pageFailed}
-                            onRenderError={pageFailed}
-                            devicePixelRatio={Math.min(
-                              window.devicePixelRatio || 1,
-                              Math.sqrt(
-                                (16 * 1024 * 1024) /
-                                  (size.width * size.height * renderZoom * renderZoom),
-                              ),
-                            )}
-                            onRenderSuccess={() => painted(index, renderZoom)}
-                          />
+                          <div
+                            style={{
+                              transform:
+                                zoom === renderZoom ? undefined : `scale(${zoom / renderZoom})`,
+                              transformOrigin: "top left",
+                            }}
+                          >
+                            <Page
+                              canvasRef={preparePageCanvas}
+                              pageNumber={index + 1}
+                              scale={renderZoom}
+                              suspense={false}
+                              loading={null}
+                              error={<p role="alert">Could not render page {index + 1}.</p>}
+                              onLoadSuccess={measurePage}
+                              onLoadError={pageFailed}
+                              onRenderError={pageFailed}
+                              devicePixelRatio={Math.min(
+                                window.devicePixelRatio || 1,
+                                Math.sqrt(
+                                  (16 * 1024 * 1024) /
+                                    (size.width * size.height * renderZoom * renderZoom),
+                                ),
+                              )}
+                              onRenderSuccess={() => painted(index, renderZoom)}
+                            />
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Document>
-            )}
+                      );
+                    })}
+                  </div>
+                </Document>
+              )}
+            </div>
           </ScrollArea.Content>
         </ScrollArea.Viewport>
         <ScrollArea.Scrollbar className="locus-pdf-scrollbar flex w-2.5 touch-none select-none p-0.5">
